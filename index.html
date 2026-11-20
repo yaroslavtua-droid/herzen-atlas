@@ -1,0 +1,1562 @@
+<title>HERZEN AI Playground</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script>/* основная тема тёмная; светлая — если её выбрали, до первой отрисовки */try{if(localStorage.getItem("herzen-atlas-theme")==="light")document.documentElement.setAttribute("data-theme","light")}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Tektur:wght@500;700&display=swap">
+<style>
+/* Layout: blueprint sheet — diagrams first, each in its own expandable figure; text as short captions */
+/* Копия design/tokens.css, версия 2. Значения здесь не менять: править tokens.css и переносить сюда. */
+:root{
+  /* Поверхности и текст */
+  --bg:#0A0C0F;        /* фон страницы */
+  --paper:#12161B;     /* карточки, панели, схемы */
+  --soft:#1A2027;      /* приглушённая заливка: узел схемы, кнопка, дорожка шкалы */
+  --grid:#11151A;      /* сетка под страницей и схемами */
+  --fg:#E6EBF0;        /* основной текст */
+  --muted:#8C98A6;     /* второстепенный текст, подписи */
+  --line:#2A323C;      /* границы и разделители */
+  --edge:#5F6B79;      /* неживые линии на схемах: заготовка, нет данных */
+  --scrim:rgb(0 0 0 / .6); /* затемнение под диалогом */
+
+  /* Акцент и живой поток: ссылки, главное действие, фокус, связь, по которой идут данные */
+  --accent:#35E6F2;  --accent-soft:#0E2A30;
+
+  /* Статусы. Означают состояние и больше ничего */
+  --ok:#4DF0A0;      --ok-soft:#0F2A20;     /* работает */
+  --warn:#FFB547;    --warn-soft:#33260F;   /* частично, требует внимания */
+  --fail:#FF6B61;    --fail-soft:#3A1614;   /* сбой */
+  --none:#9AA6B4;    --none-soft:#1A2027;   /* нет данных, в планах */
+  --pause:#E08BD0;   --pause-soft:#33222F;  /* на паузе */
+
+  /* Категории. Означают, чьё это, и не означают состояние */
+  --cat-ai:#FF4FD8;     --cat-ai-soft:#331230;     /* ИИ-агенты и метка «новое» */
+  --cat-inbox:#8EA4FF;  --cat-inbox-soft:#1E2747;  /* процесс «Анастасия · переписка» */
+  /* процесс «Сигналы от СОБов» использует --accent */
+
+  /* Свечение. Только у живой связи, сбоя, метки «новое» и световой полосы */
+  --glow:rgb(53 230 242 / .65);
+  --glow-fail:rgb(255 107 97 / .6);
+  --glow-new:rgb(255 79 216 / .55);
+
+  /* Шрифты */
+  --display:"Tektur","IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono","Cascadia Mono",ui-monospace,Menlo,Consolas,monospace;
+
+  /* Кегли */
+  --t-micro:12px;   /* надстрочные метки, время, моноширинные подписи */
+  --t-small:13px;   /* подписи, вторая строка карточки */
+  --t-body:15px;    /* основной текст */
+  --t-lead:17px;    /* вводный абзац, h3 */
+  --t-num:24px;     /* крупное число в плитке */
+  --t-h2:clamp(20px,2.6vw,28px);
+  --t-h1:clamp(28px,5vw,52px);
+
+  /* Отступы: только эти шаги */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:40px; --s7:64px;
+
+  /* Форма: углы прямые, у карточек, плиток и узлов срезаны два угла — левый верхний и правый нижний */
+  --cut-s:7px;    /* срез у узлов схем, кнопок, меток */
+  --cut:10px;     /* срез у карточек и плиток */
+  --cut-l:14px;   /* срез у панелей и полос схемы */
+  --r-s:0; --r-m:0; --r-l:0;   /* скруглений нет; имена оставлены для экранов версии 1 */
+  --r-pill:999px;              /* только точка и плашка статуса */
+
+  /* Ширина контента */
+  --w-page:1280px;
+  --w-text:70ch;
+  --nodew:184px;
+
+  color-scheme:dark;
+}
+
+:root[data-theme="light"]{
+  --bg:#DDE1E5; --paper:#EEF1F3; --soft:#E3E7EA; --grid:#D3D8DD;
+  --fg:#12161B; --muted:#4C5763; --line:#B4BDC6; --edge:#7B8792; --scrim:rgb(18 22 27 / .45);
+  --accent:#005F6B; --accent-soft:#CFE8EB;
+  --ok:#0B5E3A; --ok-soft:#D3EBDD; --warn:#7A4900; --warn-soft:#F3E4C8;
+  --fail:#A8271E; --fail-soft:#F6DAD6; --none:#4C5763; --none-soft:#E3E7EA;
+  --pause:#7A3F6B; --pause-soft:#EEDDE9;
+  --cat-ai:#8F0F7B; --cat-ai-soft:#F3D9EE; --cat-inbox:#2440B8; --cat-inbox-soft:#E0E6FA;
+  --glow:rgb(0 0 0 / 0); --glow-fail:rgb(0 0 0 / 0); --glow-new:rgb(0 0 0 / 0); /* на светлом не светится */
+  color-scheme:light}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+body.locked{overflow:hidden}
+.wrap{max-width:1180px;margin:0 auto}
+a{color:var(--accent)}
+h1,h2,h3,h4{text-wrap:balance;margin:0}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(26px,4.4vw,44px);line-height:1.08;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:500;font-size:clamp(20px,2.6vw,27px);line-height:1.2}
+h3{font-size:17px;font-weight:600}
+p{margin:0;max-width:70ch}
+code,.mono{font-family:var(--mono);font-size:.86em}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+
+nav.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+nav.top .wrap{display:flex;gap:4px;overflow-x:auto;padding-block:8px;scrollbar-width:none}
+nav.top a{flex:none;text-decoration:none;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:0;white-space:nowrap}
+nav.top a:hover,nav.top a:focus-visible{background:var(--soft);color:var(--fg);outline:none}
+
+header.hero{padding-block:40px 28px;display:grid;gap:18px}
+.hero .lead{font-size:17px;color:var(--muted)}
+section{padding-block:40px;border-top:1px solid var(--line);display:grid;gap:18px}
+section[id]{scroll-margin-top:56px}
+.sec-head{display:grid;gap:8px}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:3px 9px;border-radius:0;white-space:nowrap;line-height:1.4}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st.ok{color:var(--ok);background:var(--ok-soft)} .st.part{color:var(--warn);background:var(--warn-soft)}
+.st.plan{color:var(--none);background:var(--none-soft)} .st.pause{color:var(--pause);background:var(--pause-soft)}
+.st.demo{color:var(--accent);background:var(--accent-soft)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.dot.ok{background:var(--ok)} .dot.part{background:var(--warn)} .dot.plan{border:1.5px dashed var(--none)} .dot.pause{background:var(--pause)} .dot.demo{background:var(--accent)}
+
+/* ===== figure with fit + fullscreen ===== */
+.dg{background:var(--paper);border:1px solid var(--line);border-radius:0;margin:0;overflow:hidden;display:flex;flex-direction:column;min-width:0;max-width:100%}
+.dg figcaption{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.dg figcaption .cap{flex:1 1 220px;min-width:0;font-size:15px;font-weight:600}
+.dg figcaption .cap small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.tools{display:flex;gap:6px;align-items:center}
+.btn{font:inherit;font-size:13px;display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:0;padding:6px 10px;cursor:pointer;white-space:nowrap;line-height:1.2}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,.chip:focus-visible,#q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn svg{width:14px;height:14px}
+.zoom{display:none;gap:var(--s2);align-items:center}
+.zoom .pct{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:44px;text-align:center}
+.viewport{overflow:auto;padding:var(--s5) var(--s4);background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+.sizer{position:relative;overflow:hidden;margin:0 auto}
+.canvas{position:absolute;left:0;top:0;transform-origin:0 0;width:max-content}
+.dg.in-fs{position:fixed;inset:0;z-index:60;border-radius:0;border:0;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.dg.in-fs .viewport{flex:1;padding:0;display:flex}
+.dg.in-fs .zoom{display:flex}
+.dg.in-fs .sizer{margin:auto}
+.hint{font-size:13px;color:var(--muted)}
+
+/* ===== flow engine ===== */
+.flow{position:relative;display:grid;column-gap:64px;row-gap:30px;align-items:center;padding:6px 6px 18px}
+.flow svg.edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.nd{position:relative;z-index:1;width:var(--nodew);background:var(--paper);border:1.5px solid var(--line);border-radius:0;padding:9px 12px 10px;display:grid;gap:3px;align-self:center}
+.nd .ey{font-family:var(--mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.nd .nt{font-weight:600;font-size:15px;line-height:1.25;display:flex;gap:8px;align-items:baseline}
+.nd .nt .dot{transform:translateY(-1px)}
+.nd .ns{font-size:13px;color:var(--muted);line-height:1.35}
+.nd .ns code{font-size:12px;color:var(--fg)}
+.k-dec{border:2px solid var(--accent);background:var(--accent-soft)} .k-dec .ey{color:var(--accent)}
+.k-db{border-bottom-width:5px;border-bottom-style:double}
+.k-person{background:var(--soft);border-color:transparent}
+.k-ai{border:2px solid var(--cat-ai);background:var(--cat-ai-soft);width:calc(var(--nodew) + 16px);padding:14px} .k-ai .ey{color:var(--cat-ai)} .k-ai .nt{font-size:17px}
+.k-end{background:var(--bg)}
+.nd.is-plan{border-style:dashed;background:transparent}
+.lbl{position:absolute;z-index:2;transform:translate(-50%,-50%);font-size:12px;line-height:1.25;color:var(--fg);background:var(--paper);border:1px solid var(--line);padding:2px 7px;border-radius:0;max-width:150px;text-align:center;white-space:normal}
+.lbl.side{transform:translate(8px,-50%);text-align:left}
+.lbl.dash{color:var(--none);border-style:dashed}
+
+/* ===== environment stack ===== */
+.stack{width:1120px;display:grid;gap:10px}
+.lyr{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:stretch}
+.lyr .lh{display:grid;align-content:center;gap:2px;padding-right:6px;border-right:2px solid var(--line)}
+.lyr .lh b{font-size:15px}
+.lyr .lh span{font-size:12px;color:var(--muted);line-height:1.35}
+.tiles{display:grid;gap:8px;grid-auto-flow:column;grid-auto-columns:1fr}
+.tile{background:var(--paper);border:1.5px solid var(--line);border-radius:0;padding:9px 11px;display:grid;gap:2px;align-content:start}
+.tile .nt{font-weight:600;font-size:15px;display:flex;gap:7px;align-items:baseline;line-height:1.25}
+.tile .ns{font-size:13px;color:var(--muted);line-height:1.35}
+.tile.is-plan{border-style:dashed;background:transparent}
+.tile.ai{border:2px solid var(--cat-ai);background:var(--cat-ai-soft)}
+.tile.soft{background:var(--soft);border-color:transparent}
+.vm{border:2px solid var(--accent);border-radius:0;padding:12px;display:grid;gap:10px;position:relative;background:var(--paper)}
+.vm > .tag{position:absolute;top:-11px;left:14px;background:var(--accent);color:var(--bg);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:0}
+.vm .lyr .lh{border-right-color:var(--accent-soft)}
+.chain{display:flex;align-items:center;gap:8px}
+.chain .tile{flex:1}
+.chain .ar{color:var(--edge);flex:none}
+
+/* ===== components overview ===== */
+.comps{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:12px}
+.comp{background:var(--paper);border:1px solid var(--line);border-radius:0;padding:16px;display:grid;gap:10px;align-content:start;text-decoration:none;color:inherit;min-width:0}
+.comp:hover,.comp:focus-visible{border-color:var(--accent);outline:none}
+.comp.ana{border:2px solid var(--cat-ai)}
+.comp .kind{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.comp.ana .kind{color:var(--cat-ai)}
+.comp h3{font-weight:600;font-size:var(--t-lead)}
+.comp p{font-size:13px;color:var(--muted)}
+.caps{display:flex;flex-wrap:wrap;gap:6px}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:0;padding:16px;display:grid;gap:10px;align-content:start;min-width:0}
+.panel h3{font-size:13px;font-family:var(--mono);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.panel h4{font-size:var(--t-lead)}
+.panel.lv1{border-top:4px solid var(--ok)} .panel.lv2{border-top:4px solid var(--warn)} .panel.lv3{border-top:4px solid var(--cat-ai)}
+ul.check{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:15px}
+ul.check li{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start}
+ul.check li::before{content:"";width:10px;height:10px;border-radius:50%;margin-top:6px}
+ul.check li.ok::before{background:var(--ok)} ul.check li.part::before{background:var(--warn)} ul.check li.plan::before{border:1.5px dashed var(--none)}
+ul.plain{margin:0;padding-left:18px;font-size:15px;display:grid;gap:4px}
+.kv{display:flex;flex-wrap:wrap;gap:8px}
+.kv span{font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:0;padding:4px 9px;font-variant-numeric:tabular-nums}
+.kv b{font-weight:600}
+.matrix{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+.matrix th,.matrix td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.matrix th{font-weight:600;font-size:13px;color:var(--muted)}
+.yes{color:var(--ok);font-weight:600}.warn{color:var(--warn);font-weight:600}.no{color:var(--none);font-weight:600}
+.scroll{overflow-x:auto}
+
+.filters{display:grid;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--paper);color:var(--fg);padding:5px 11px;border-radius:0;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+#q{font:inherit;font-size:15px;width:100%;max-width:420px;padding:8px 12px;border:1px solid var(--line);border-radius:0;background:var(--paper);color:var(--fg)}
+.count{font-size:13px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:0;padding:12px 14px;display:grid;gap:7px;align-content:start;min-width:0}
+.card .row{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.card .kind{font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.card h4{font-size:15px;font-weight:600;line-height:1.3}
+.card p{font-size:13px;color:var(--muted)}
+.card .path{font-family:var(--mono);font-size:12px;background:var(--soft);padding:3px 7px;border-radius:0;word-break:break-all;justify-self:start}
+.card .reuse{font-size:12px;color:var(--accent);font-weight:500}
+.sysbadge{font-size:12px;color:var(--muted)}
+
+ol.issues{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:i}
+ol.issues li{counter-increment:i;display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;background:var(--paper);border:1px solid var(--line);border-radius:0;padding:12px 14px;font-size:15px}
+ol.issues li::before{content:counter(i,decimal-leading-zero);font-family:var(--mono);color:var(--muted);font-size:13px;padding-top:2px}
+ol.issues li b{display:block;font-weight:600}
+ol.issues li span.d{color:var(--muted);font-size:13px}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);counter-reset:s}
+.step{counter-increment:s;padding:14px 14px 14px 0;border-top:3px solid var(--accent);display:grid;gap:6px;align-content:start;margin-right:10px}
+.step::before{content:"Шаг " counter(s);font-family:var(--mono);font-size:12px;color:var(--accent)}
+.step b{font-size:15px}
+.step span{font-size:13px;color:var(--muted)}
+footer{padding-block:28px 0;border-top:1px solid var(--line);font-size:13px;color:var(--muted);display:grid;gap:6px}
+
+@media (max-width:860px){
+  .comps,.two,.three{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr 1fr}
+}
+@media (max-width:520px){.steps{grid-template-columns:1fr} ol.issues li{grid-template-columns:28px 1fr} ol.issues li .st{grid-column:2;justify-self:start} .btn .t{display:none}}
+
+/* ===== info card ===== */
+.nd,.tile.clickable,.card{cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.nd:hover,.nd:focus-visible,.tile.clickable:hover,.tile.clickable:focus-visible,.card:hover,.card:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
+.k-ai:hover,.k-ai:focus-visible{border-color:var(--cat-ai)}
+#info-bg{position:fixed;inset:0;z-index:80;background:rgba(10,14,22,.32)}
+#info{position:fixed;z-index:81;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--paper);border-left:1px solid var(--line);
+  overflow-y:auto;box-shadow:-12px 0 32px rgba(10,14,22,.18);transform:translateX(16px);transition:transform .2s ease;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) 0}
+#info.open{transform:none}
+#info .inner{padding:18px 22px 32px;display:grid;gap:14px}
+#info .ih{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#info h2{font-size:var(--t-h2)}
+#info .iwhat{font-size:15px}
+#info .ib{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:12px}
+#info .ib h3{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+#info ul,#info ol{margin:0;padding-left:20px;display:grid;gap:4px;font-size:15px}
+#info ol li::marker{font-family:var(--mono);color:var(--accent)}
+#info .warn-b h3{color:var(--warn)}
+#info .io{display:grid;gap:8px;font-size:13px}
+#info .io div{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+#info .io b{font-weight:500;background:var(--soft);border-radius:0;padding:2px 7px}
+#info .path{font-family:var(--mono);font-size:12px;background:var(--soft);padding:4px 8px;border-radius:0;word-break:break-all;justify-self:start}
+@media (max-width:600px){#info{top:auto;left:0;width:100%;max-height:85vh;border-left:0;border-top:1px solid var(--line);border-radius:12px 12px 0 0;transform:translateY(16px);padding-left:env(safe-area-inset-left,0px)}}
+@media (prefers-reduced-motion:reduce){#info{transition:none}}
+
+/* ===== live monitor view ===== */
+.mhero{display:flex;gap:16px;align-items:center;padding:16px 18px;border-radius:0;background:var(--paper);border:1px solid var(--line);border-left:8px solid var(--none)}
+.mhero[data-s=ok]{border-left-color:var(--ok)} .mhero[data-s=warn]{border-left-color:var(--warn)} .mhero[data-s=fail]{border-left-color:var(--fail)}
+.mhero .grow{flex:1;min-width:0;display:grid;gap:2px}
+.mhero h3{font-weight:700;font-size:var(--t-num);line-height:1.2}
+.mhero p{color:var(--muted);font-size:13px}
+.mtiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mtile{background:var(--paper);border:1px solid var(--line);border-radius:0;padding:12px 14px;min-width:0;display:grid;gap:3px;align-content:start}
+.mtile .v{font-size:var(--t-num);font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.mtile .s{color:var(--muted);font-size:13px}
+.meter{height:6px;border-radius:0;background:var(--soft);margin:4px 0 2px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:0;background:var(--accent)}
+.meter[data-s=warn] i{background:var(--warn)} .meter[data-s=fail] i{background:var(--fail)}
+.counts{display:flex;gap:12px;flex-wrap:wrap;font-size:13px}
+.counts span{display:inline-flex;align-items:center;gap:5px}
+.ic{flex:none} .ic circle{fill:var(--none)} .ic[data-s=ok] circle{fill:var(--ok)} .ic[data-s=warn] circle{fill:var(--warn)} .ic[data-s=fail] circle{fill:var(--fail)}
+.ic path{fill:none;stroke:var(--paper);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+svg.mmap{display:block}
+.g-box{fill:none;stroke:var(--line);stroke-width:1.2}
+.g-box.inner{fill:var(--bg)}
+.g-title{font:500 12px var(--mono);letter-spacing:.07em;text-transform:uppercase;fill:var(--muted)}
+.mnode{cursor:pointer}
+.mnode rect.card{fill:var(--paper);stroke:var(--line);stroke-width:1.2;transition:stroke-width .15s}
+.mnode[data-s=ok] rect.card{stroke:var(--ok)} .mnode[data-s=warn] rect.card{stroke:var(--warn);fill:var(--warn-soft)}
+.mnode[data-s=fail] rect.card{stroke:var(--fail);fill:var(--fail-soft);stroke-width:2}
+.mnode:hover rect.card,.mnode:focus rect.card{stroke-width:2.6} .mnode:focus{outline:none}
+.mnode .t{font:600 13px var(--body);fill:var(--fg)}
+.mnode .d{font:12px var(--body);fill:var(--muted)}
+.medge{fill:none;stroke:var(--edge);stroke-width:1.6;stroke-linejoin:round}
+.medge.live{stroke:var(--accent);stroke-width:1.6;stroke-dasharray:14 4;filter:drop-shadow(0 0 4px var(--glow));animation:mflow 2.4s linear infinite}
+.medge.down{stroke:var(--fail);stroke-dasharray:2 6;filter:drop-shadow(0 0 4px var(--glow-fail))}
+@keyframes mflow{to{stroke-dashoffset:-36}}
+@media (prefers-reduced-motion:reduce){.medge.live{animation:none;stroke-dasharray:none}}
+.mrow{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--soft);font-size:15px;align-items:flex-start}
+.mrow:first-of-type{border-top:0}
+.mrow .m{color:var(--muted);font-size:13px}
+.mrow .time{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap;padding-top:2px}
+#info .live li{list-style:none;display:flex;gap:6px;align-items:center;margin-left:-20px}
+@media (max-width:860px){.mtiles{grid-template-columns:1fr 1fr}}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.theme{display:flex;border:1px solid var(--line);flex:none}
+.theme button{font:inherit;display:grid;place-items:center;width:40px;height:36px;padding:0;border:0;background:transparent;color:var(--fg);cursor:pointer}
+.theme button:hover{background:var(--soft)}
+.theme button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.theme button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.theme svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:560px){.theme button{width:44px;height:44px}}
+/* PULT-MAP:CSS:BEGIN — стили схемы пульта. Атлас копирует этот блок без правок (monitor/sync_atlas.py). Править только здесь. */
+.pmap{display:block}
+.pmap .g-box{fill:none;stroke:var(--line);stroke-width:1.2}
+.pmap .g-box.inner{fill:var(--bg)}
+.pmap .g-box.plan{stroke:var(--edge);stroke-dasharray:6 5}
+.pmap .g-title{font:700 13px var(--display);letter-spacing:.06em;text-transform:uppercase;fill:var(--muted)}
+.pmap .g-title[data-g=ana]{fill:var(--cat-inbox)} .pmap .g-title[data-g=sob]{fill:var(--accent)} .pmap .g-title[data-g=oc]{fill:var(--cat-ai)}
+.pmap .node{cursor:pointer}
+.pmap .node .card{fill:var(--soft);stroke:var(--line);stroke-width:1.2}
+.pmap .node[data-s=ok] .card{stroke:var(--ok)} .pmap .node[data-s=warn] .card{stroke:var(--warn);fill:var(--warn-soft)}
+.pmap .node[data-s=fail] .card{stroke:var(--fail);fill:var(--fail-soft);stroke-width:1.6;filter:drop-shadow(0 0 6px var(--glow-fail))}
+.pmap .node[data-s=off] .card{stroke:var(--pause)}
+.pmap .node.plan .card{fill:none;stroke:var(--edge);stroke-dasharray:5 4}
+.pmap .node.plan .t{fill:var(--muted)}
+.pmap .node:hover .card{stroke-width:2.4} .pmap .node:focus{outline:none} .pmap .node:focus-visible .card{stroke:var(--accent);stroke-width:2.6}
+.pmap .node.sel .card{stroke:var(--accent);stroke-width:2.6}
+.pmap .node .t{font:600 13px var(--body);fill:var(--fg)}
+.pmap .node .d{font:12px var(--body);fill:var(--muted)}
+.pmap .node .d.up{fill:var(--accent);font-weight:600}
+/* Связи: живая — акцент со свечением и бегущими точками, без данных и заготовка — пунктир, сбой — красная, мигает раз в 2 с */
+.pmap .edge{fill:none;stroke:var(--edge);stroke-width:1.2;stroke-dasharray:5 5;stroke-linejoin:round}
+.pmap .edge.plan{stroke-dasharray:2 6}
+.pmap .edge.live{stroke:var(--accent);stroke-width:1.6;stroke-dasharray:none;filter:drop-shadow(0 0 5px var(--glow))}
+.pmap .edge.down{stroke:var(--fail);stroke-width:1.6;stroke-dasharray:none;filter:drop-shadow(0 0 5px var(--glow-fail));animation:pm-blink 2s steps(2,jump-none) infinite}
+.pmap .edge.pkt{stroke:var(--fg);stroke-width:3;stroke-linecap:round;stroke-dasharray:1 46;animation:pm-run 2.4s linear infinite;filter:drop-shadow(0 0 6px var(--glow))}
+@keyframes pm-run{to{stroke-dashoffset:-47}}
+@keyframes pm-blink{50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){.pmap .edge.pkt{display:none}.pmap .edge.down{animation:none}}
+.pmap .ic circle{fill:var(--none)} .pmap .ic[data-s=ok] circle{fill:var(--ok)} .pmap .ic[data-s=warn] circle{fill:var(--warn)} .pmap .ic[data-s=fail] circle{fill:var(--fail)} .pmap .ic[data-s=off] circle{fill:var(--pause)}
+.pmap .ic path{fill:none;stroke:var(--bg);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.pmap .node.plan .ic circle{fill:none;stroke:var(--edge);stroke-width:1.5;stroke-dasharray:3 3} .pmap .node.plan .ic path{stroke:var(--edge)}
+.pmap .nbtn{cursor:pointer} .pmap .nbtn:focus{outline:none}
+.pmap .nbtn .bg{fill:var(--paper);stroke:var(--line);stroke-width:1.2}
+.pmap .nbtn path{fill:none;stroke:var(--muted);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.pmap .nbtn path.solid{fill:var(--muted);stroke:none}
+.pmap .nbtn:hover .bg,.pmap .nbtn:focus-visible .bg{fill:var(--soft);stroke:var(--accent);stroke-width:1.8}
+.pmap .nbtn:hover path,.pmap .nbtn:focus-visible path{stroke:var(--accent)} .pmap .nbtn:hover path.solid,.pmap .nbtn:focus-visible path.solid{fill:var(--accent)}
+.pmap .nbtn.stop:hover .bg,.pmap .nbtn.stop:focus-visible .bg{fill:var(--fail-soft);stroke:var(--fail)} .pmap .nbtn.stop:hover path.solid,.pmap .nbtn.stop:focus-visible path.solid{fill:var(--fail)}
+.pmap .nbtn.go .bg{fill:var(--ok-soft);stroke:var(--ok)} .pmap .nbtn.go path.solid{fill:var(--ok)}
+.pmap .nbtn.go:hover .bg,.pmap .nbtn.go:focus-visible .bg{fill:var(--ok);stroke:var(--ok)} .pmap .nbtn.go:hover path.solid,.pmap .nbtn.go:focus-visible path.solid{fill:var(--bg)}
+.pmap .nbtn.wait{pointer-events:none;opacity:.4} .pmap .nbtn.run{opacity:1}
+.pmap .nbtn.run .bg{stroke:var(--accent);stroke-width:1.8} .pmap .nbtn.run g{animation:pm-spin 1s linear infinite;transform-origin:center;transform-box:fill-box}
+@keyframes pm-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.pmap .nbtn.run g{animation:none}}
+/* Просмотр на весь экран: перетаскивание, щипок, Ctrl + колесо, клавиши */
+.pm-fs{position:fixed;inset:0;z-index:60;margin:0;display:flex;flex-direction:column;background:var(--bg)}
+.pm-stage-on{overflow:hidden!important;touch-action:none;cursor:grab;position:relative;flex:1;user-select:none;-webkit-user-select:none}
+.pm-stage-on.pm-grab{cursor:grabbing}
+.pm-stage-on .pm-content{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.pm-locked{overflow:hidden}
+.pm-mini{--c:var(--cut);display:none;position:absolute;right:var(--s4);bottom:var(--s4);z-index:2;width:200px;padding:var(--s1);background:var(--paper);border:1px solid var(--line);cursor:pointer;
+  clip-path:polygon(var(--c) 0,100% 0,100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,0 100%,0 var(--c))}
+.pm-stage-on .pm-mini{display:block}
+.pm-mini-in{position:relative;overflow:hidden}
+.pm-mini-in>*{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none}
+.pm-mini-view{position:absolute;border:1.5px solid var(--accent);pointer-events:none}
+@media (max-width:560px){.pm-stage-on .pm-mini{display:none}}
+/* PULT-MAP:CSS:END */
+.dg.in-fs .viewport{padding:0}
+.dg.in-fs .sizer{position:absolute;inset:0;width:auto!important;height:auto!important;margin:0;overflow:visible}
+.dg.in-fs::after{content:"Тяните схему мышью или пальцем · масштаб — щипок, Ctrl + колесо, + − 0 · двойной клик — приблизить · Esc — выход";
+  padding:var(--s2) var(--s4);border-top:1px solid var(--line);font-size:var(--t-micro);color:var(--muted);background:var(--paper)}
+@media (max-height:520px){.dg.in-fs::after{display:none}}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+
+<nav class="top" aria-label="Разделы"><div class="wrap">
+  <a href="#now">Сейчас на сервере</a>
+  <a href="#env">Среда</a>
+  <a href="#components">Компоненты</a>
+  <a href="#anastasia">Анастасия</a>
+  <a href="#sob">Сигналы от СОБов</a>
+  <a href="#agents">Среда агентов</a>
+  <a href="#catalog">Модули</a>
+  <a href="#next">ИИ-коллега</a>
+  <a href="#open">Открытые вопросы</a>
+  <a href="#howto">Как добавить модуль</a>
+</div></nav>
+
+<div class="wrap">
+<header class="hero">
+  <div class="hrow"><div class="eyebrow">HERZEN · визуальная документация · обновлено 19 ноября 2026</div>
+    <div class="theme" id="theme" role="group" aria-label="Цветовая тема">
+      <button type="button" data-mode="dark" aria-pressed="true" aria-label="Тёмная тема" title="Тёмная тема"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.2A8 8 0 1 1 9.8 4a6.4 6.4 0 0 0 10.2 10.2z"/></svg></button>
+      <button type="button" data-mode="light" aria-pressed="false" aria-label="Светлая тема" title="Светлая тема"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></button>
+    </div></div>
+  <h1>HERZEN AI Playground</h1>
+  <p class="lead">Среда, где HERZEN выращивает ИИ-сотрудников и автоматизирует процессы на корпоративной Windows. Главный компонент — Анастасия, ИИ-помощник, которому можно передавать рутинные задачи.</p>
+  <div class="legend" aria-label="Обозначения">
+    <span class="st ok">Работает, проверено</span>
+    <span class="st part">Частично или разовый тест</span>
+    <span class="st plan">Запланировано</span>
+    <span class="st pause">На паузе</span>
+    <span class="st demo">Демо или эксперимент</span>
+  </div>
+  <p class="hint">Нажмите на любой блок схемы или карточку модуля — откроется описание: источники, процесс, результат. Схемы раскрываются на весь экран кнопкой справа.</p>
+</header>
+
+<!-- ============ LIVE MONITOR ============ -->
+<section id="now">
+  <div class="sec-head">
+    <div class="eyebrow">Сейчас на сервере · по данным пульта</div>
+    <h2>Что работает прямо сейчас</h2>
+    <p>Главный вид пульта Playground. Пульт раз в минуту проверяет каждый модуль сервера, включая то, отвечает ли модель. Упавшую задачу он поднимает сам, о сбое пишет Ярославу в Telegram, при слетевшем входе в ChatGPT сам открывает повторный вход. Сеть и VPN не трогает. На второй вкладке пульта — дневник инцидентов. Пульт стоит на том же сервере: если пропадут сам сервер или VPN, сообщить он не сможет, поэтому пульт с 17.11 шлёт внешнему сторожу «сигнал жизни» (тревога заработает после подключения Telegram). Здесь показан снимок главного вида; живая страница открывается только на самом сервере.</p>
+  </div>
+  <div class="mhero" id="mhero"><svg class="ic" id="mheroIcon" width="52" height="52" viewBox="0 0 24 24"></svg>
+    <div class="grow"><span class="eyebrow" id="mstamp"></span><h3 id="mverdict"></h3><p id="msub"></p></div></div>
+  <div class="mtiles">
+    <div class="mtile"><span class="eyebrow">После перезагрузки</span><span class="v" id="mup">—</span><span class="s" id="mboot"></span></div>
+    <div class="mtile"><span class="eyebrow">Модули</span><span class="v" id="mshare">—</span><span class="counts" id="mcounts"></span></div>
+    <div class="mtile"><span class="eyebrow">Диск C:</span><span class="v" id="mdiskv">—</span><span class="meter" id="mdiskm"><i></i></span><span class="s" id="mdisks"></span></div>
+    <div class="mtile"><span class="eyebrow">Память</span><span class="v" id="mmemv">—</span><span class="meter" id="mmemm"><i></i></span><span class="s" id="mmems"></span></div>
+  </div>
+  <figure class="dg" id="dg-mon">
+    <figcaption><span class="cap">Схема модулей сервера<small>Та же схема, что на пульте. Зелёный — работает, жёлтый — замечание, красный — сбой, пунктир — заготовка этапа 2. Бегущие точки — живая связь. Нажмите на модуль</small></span><span class="tools"></span></figcaption>
+    <div class="viewport"><div class="sizer"><div class="canvas"><svg class="mmap pmap" id="mmap" role="img" aria-label="Схема модулей сервера и их состояние"></svg></div></div></div>
+  </figure>
+  <div class="two">
+    <div class="panel"><h3>Требует внимания</h3><div id="missues"></div></div>
+    <div class="panel"><h3>Журнал изменений</h3><div id="mevents"></div></div>
+  </div>
+</section>
+
+<!-- ============ ENVIRONMENT ============ -->
+<section id="env">
+  <div class="sec-head">
+    <div class="eyebrow">Среда</div>
+    <h2>На чём всё работает</h2>
+    <p>Схема читается сверху вниз: люди общаются через каналы с ИИ-сотрудниками, те работают на платформе внутри виртуальной машины Windows, используют облачные модели и данные компании.</p>
+  </div>
+  <figure class="dg" id="dg-env">
+    <figcaption><span class="cap">Слои среды<small>Синяя рамка — то, что работает на корпоративной Windows</small></span><span class="tools"></span></figcaption>
+    <div class="viewport"><div class="sizer"><div class="canvas">
+      <div class="stack">
+        <div class="lyr"><div class="lh"><b>Люди</b><span>кто ставит задачи и решает</span></div>
+          <div class="tiles">
+            <div class="tile soft"><span class="nt"><i class="dot ok"></i>Владелец</span><span class="ns">ставит поручения, принимает решения</span></div>
+            <div class="tile soft"><span class="nt"><i class="dot ok"></i>Оператор</span><span class="ns">подтверждает связи и отправку</span></div>
+            <div class="tile is-plan"><span class="nt"><i class="dot plan"></i>Коллеги</span><span class="ns">в рабочих чатах</span></div>
+            <div class="tile soft"><span class="nt"><i class="dot part"></i>Внешние собеседники</span><span class="ns">клиенты, контрагенты</span></div>
+          </div></div>
+        <div class="lyr"><div class="lh"><b>Каналы</b><span>где происходит общение и работа</span></div>
+          <div class="tiles">
+            <div class="tile"><span class="nt"><i class="dot part"></i>Telegram</span><span class="ns">лички, боты, Business</span></div>
+            <div class="tile"><span class="nt"><i class="dot part"></i>Почта</span><span class="ns">чтение по IMAP; отправка впереди</span></div>
+            <div class="tile"><span class="nt"><i class="dot part"></i>MAX</span><span class="ns">пока ручной перенос</span></div>
+            <div class="tile"><span class="nt"><i class="dot ok"></i>Веб-очередь</span><span class="ns">рабочее место оператора</span></div>
+            <div class="tile is-plan"><span class="nt"><i class="dot plan"></i>HerzenCRM и WEEEK</span><span class="ns">поручения, задачи, заявки</span></div>
+          </div></div>
+        <div class="vm"><span class="tag">Корпоративная Windows · виртуальная машина</span>
+          <div class="lyr"><div class="lh"><b>ИИ-сотрудники и процессы</b><span>кто делает работу</span></div>
+            <div class="tiles">
+              <a class="tile ai" href="#anastasia" style="text-decoration:none;color:inherit"><span class="nt"><i class="dot part"></i>Анастасия</span><span class="ns">ИИ-помощник: переписка, поручения, письма, заявки</span></a>
+              <a class="tile" href="#sob" style="text-decoration:none;color:inherit"><span class="nt"><i class="dot part"></i>Сигналы от СОБов</span><span class="ns">процесс: объявления собственников → задачи</span></a>
+              <a class="tile" href="#agents" style="text-decoration:none;color:inherit"><span class="nt"><i class="dot ok"></i>Инженер песочницы</span><span class="ns">агент, развивает проект сам на своём узле</span></a>
+            </div></div>
+          <div class="lyr"><div class="lh"><b>Платформа</b><span>что держит их запущенными</span></div>
+            <div class="tiles">
+              <div class="tile"><span class="nt"><i class="dot ok"></i>OpenClaw</span><span class="ns">шлюз агентов: память, каналы, расписание</span></div>
+              <div class="tile"><span class="nt"><i class="dot ok"></i>Python-сервисы</span><span class="ns">очереди, сборщики, боты</span></div>
+              <div class="tile"><span class="nt"><i class="dot part"></i>Планировщик</span><span class="ns">автозапуск всех модулей при загрузке</span></div>
+              <div class="tile"><span class="nt"><i class="dot ok"></i>SQLite</span><span class="ns">своя база у каждого процесса</span></div>
+              <div class="tile"><span class="nt"><i class="dot ok"></i>Правила и память</span><span class="ns">в файлах, версии в Git</span></div>
+            </div></div>
+          <div class="lyr"><div class="lh"><b>Машина</b><span>ресурсы</span></div>
+            <div class="tiles">
+              <div class="tile"><span class="nt"><i class="dot part"></i>Windows 11 Pro</span><span class="ns">8 vCPU · 16 ГБ · диск 63 ГБ; памяти и диска впритык</span></div>
+              <div class="tile"><span class="nt"><i class="dot ok"></i>Мониторинг</span><span class="ns">пульт Playground, Zabbix; с 19.11 данные уходят в мониторинг Глеба (OTel)</span></div>
+              <div class="tile"><span class="nt"><i class="dot part"></i>Доступ</span><span class="ns">с 15.11 новый VPN, RDP, SSH по ключу; без VPN сервер недоступен, сеть меняет только администратор</span></div>
+              <div class="tile"><span class="nt"><i class="dot ok"></i>Дневник инцидентов</span><span class="ns">сбои и правила из них; вкладка на пульте</span></div>
+            </div></div>
+        </div>
+        <div class="lyr"><div class="lh"><b>Модели</b><span>облачные подписки</span></div>
+          <div class="tiles">
+            <div class="tile"><span class="nt"><i class="dot ok"></i>ChatGPT / Codex</span><span class="ns">основная модель агентов, черновики</span></div>
+            <div class="tile"><span class="nt"><i class="dot ok"></i>Claude</span><span class="ns">разбор обращений, второе мнение</span></div>
+            <div class="tile is-plan"><span class="nt"><i class="dot plan"></i>Replicate</span><span class="ns">доступен, не подключён</span></div>
+          </div></div>
+        <div class="lyr"><div class="lh"><b>Данные и площадки</b><span>откуда берём факты</span></div>
+          <div class="tiles">
+            <div class="tile"><span class="nt"><i class="dot ok"></i>HerzenCRM</span><span class="ns">herzencrm.pro · ночной снимок объектов и блоков</span></div>
+            <div class="tile"><span class="nt"><i class="dot part"></i>WEEEK</span><span class="ns">weeek.net · реестр дел Анастасии</span></div>
+            <div class="tile"><span class="nt"><i class="dot ok"></i>ЦИАН</span><span class="ns">поиски «От собственника»</span></div>
+            <div class="tile is-plan"><span class="nt"><i class="dot plan"></i>Авито</span><span class="ns">ждём первое письмо</span></div>
+            <div class="tile"><span class="nt"><i class="dot pause"></i>M2DATA</span><span class="ns">на паузе</span></div>
+          </div></div>
+        <div class="lyr"><div class="lh"><b>Мастерская</b><span>как изменения попадают на сервер</span></div>
+          <div class="chain">
+            <div class="tile"><span class="nt"><i class="dot ok"></i>Mac</span><span class="ns">Claude Code, Codex, тесты</span></div><span class="ar">→</span>
+            <div class="tile"><span class="nt"><i class="dot ok"></i>Git</span><span class="ns">приватный репозиторий, без секретов</span></div><span class="ar">→</span>
+            <div class="tile"><span class="nt"><i class="dot ok"></i>VPN + SSH</span><span class="ns">доступ к серверу</span></div><span class="ar">→</span>
+            <div class="tile"><span class="nt"><i class="dot ok"></i>Release.ps1</span><span class="ns">установка релиза</span></div>
+          </div></div>
+      </div>
+    </div></div></div>
+  </figure>
+  <div class="three">
+    <div class="panel"><h3>Код</h3><p>Читает почту, отсеивает повторы, проверяет пороги, хранит состояние и журнал.</p></div>
+    <div class="panel"><h3>Модель</h3><p>Подключается к отдельному шагу: понять обращение, написать черновик, выбрать маршрут.</p></div>
+    <div class="panel"><h3>Человек</h3><p>Подтверждает цены, сроки, связи с CRM и всё, что выходит за выданные полномочия.</p></div>
+  </div>
+  <div class="panel lv2">
+    <h3>Правила эксплуатации · после инцидентов 11–15 ноября</h3>
+    <h4>Сеть и VPN меняет только администратор</h4>
+    <p>11 ноября пропал доступ к серверу через VPN: на нём накопилось много правок сетевых настроек, кто их сделал — не установлено. Администратор восстановил сервер на новом адресе.</p>
+    <ul class="check">
+      <li class="ok">Агенты, скрипты и чаты Claude и Codex не меняют сетевые интерфейсы, DNS, брандмауэр, удалённый доступ и VPN — ни на сервере, ни на Mac. Смотреть можно, менять нельзя</li>
+      <li class="ok">Одно исключение с 19.11, по разрешению Глеба: если трафика через VPN нет дольше 30 секунд, запасной сторож пульта может отключить и снова подключить BGVPN. Больше ничего в сети он не трогает</li>
+      <li class="ok">Нужна правка сети — тикет Ярославу по форме из дневника инцидентов, он согласует с администратором. До ответа задача заблокирована</li>
+      <li class="ok">Правила записаны в AGENTS.md репозитория и действуют для Claude, Codex, агентов OpenClaw и скриптов</li>
+      <li class="part">Один вход в ChatGPT — одна программа: шлюз и пилот входят каждый своим входом (предварительное правило после И-2)</li>
+    </ul>
+    <h4>Переносы и выкладка на сервер</h4>
+    <p>12 ноября шлюз агентов переносили на отдельную учётку Windows. Первая попытка ночью не удалась, боты молчали 9 минут (И-3); перенос прошёл днём после репетиции. В тот же день два чата выложили один файл пульта друг поверх друга, и общий вход Codex был стёрт (И-4).</p>
+    <ul class="check">
+      <li class="ok">Работающий модуль переносим через репетицию: новый экземпляр поднимаем рядом со старым и проверяем, старый останавливаем только потом. Переключаем днём, когда Ярослав на связи</li>
+      <li class="ok">Перед запуском или перезаписью файла на сервере сверяем его контрольную сумму с той, что выкладывали сами. Не совпала — сначала выясняем, кто и зачем его изменил</li>
+      <li class="ok">За пульт отвечает один чат: он правит и выкладывает пульт, остальные пишут ему, что изменить</li>
+      <li class="ok">Дневник инцидентов открыт на пульте отдельной вкладкой: правила сверху, записи ниже</li>
+    </ul>
+    <h4>Простои из-за VPN и перезагрузок</h4>
+    <p>13–15 ноября сервер дважды пропадал вместе с VPN: после блокировок пришлось сменить VPN, сервер был недоступен около полутора суток, Анастасия молчала 21 час (И-5). 15 ноября после ночной перезагрузки пилот не поднялся без входа в Windows, а затем снова пропал VPN; администратор перевёл сервер на новый VPN, Анастасия молчала 18,5 часа (И-6). В тот же вечер пилот не стартовал на новой версии Codex из-за прав на папку, простой 2 минуты (И-7).</p>
+    <ul class="check">
+      <li class="ok">Новую версию проверяем там же, где она будет работать: из сеанса пользователя без повышения прав, до переключения</li>
+      <li class="part">Зависимость от VPN пока не чиним, решение Ярослава от 15.11: записано в задачи, следующий шаг — внешний сигнал жизни и второй сервер</li>
+      <li class="ok">После простоя дольше часа пилот сам пишет Ярославу, с какого по какое время не работал</li>
+    </ul>
+    <span class="path mono" style="justify-self:start">docs/incidents.md</span>
+  </div>
+</section>
+
+<!-- ============ COMPONENTS OVERVIEW ============ -->
+<section id="components">
+  <div class="sec-head">
+    <div class="eyebrow">Компоненты</div>
+    <h2>Что мы строим</h2>
+  </div>
+  <div class="comps">
+    <a class="comp ana" href="#anastasia">
+      <span class="kind">ИИ-помощник</span>
+      <h3>Анастасия</h3>
+      <p>Человечный ИИ-помощник: общается в мессенджерах, ставит поручения в HerzenCRM и задачи в WEEEK, отправляет письма, оформляет заявки. Берёт на себя задачи, которые легко автоматизировать и передать.</p>
+      <div class="caps"><span class="st ok">Личка через OpenClaw</span><span class="st part">Почта</span><span class="st plan">HerzenCRM</span><span class="st part">WEEEK</span><span class="st plan">Заявки</span></div>
+    </a>
+    <a class="comp" href="#sob">
+      <span class="kind">Процесс</span>
+      <h3>Сигналы от СОБов</h3>
+      <p>Ловит объявления собственников складов, сверяет с CRM и готовит задачу специалисту.</p>
+      <div class="caps"><span class="st ok">Сверка с CRM</span><span class="st ok">Веб-очередь</span><span class="st ok">Доставка через Анастасию</span><span class="st ok">Разбор аналитиком</span></div>
+    </a>
+    <a class="comp" href="#agents">
+      <span class="kind">Платформа и агент</span>
+      <h3>Среда агентов OpenClaw</h3>
+      <p>Держит ИИ-сотрудников запущенными. Здесь живут Анастасия-агент и Инженер песочницы.</p>
+      <div class="caps"><span class="st ok">Шлюз</span><span class="st ok">Инженер</span><span class="st ok">Telegram-боты</span></div>
+    </a>
+  </div>
+</section>
+
+<!-- ============ ANASTASIA ============ -->
+<section id="anastasia">
+  <div class="sec-head">
+    <div class="eyebrow">Компонент 01 · ИИ-помощник</div>
+    <h2>Анастасия</h2>
+    <p>Рабочая ИИ-персона HERZEN. Готовим её как человечного помощника: она понимает обращение, сама делает то, что разрешено правилами, а остальное готовит и согласует с владельцем.</p>
+  </div>
+  <figure class="dg" data-flow="anaCaps">
+    <figcaption><span class="cap">Что умеет Анастасия<small>Слева откуда приходят задачи, справа что она делает. Пунктир — навык ещё не подключён</small></span><span class="tools"></span></figcaption>
+    <div class="viewport"><div class="sizer"><div class="canvas"><div class="flow"></div></div></div></div>
+  </figure>
+  <div class="three">
+    <div class="panel lv1"><h3>Делает сама</h3><h4>В рамках правил</h4><ul class="plain"><li>Дружеская реплика в личке</li><li>Ответ по подтверждённым материалам</li><li>Запись договорённостей в память</li></ul></div>
+    <div class="panel lv2"><h3>Готовит черновик</h3><h4>Оператор проверяет</h4><ul class="plain"><li>Рабочий ответ клиенту или коллеге</li><li>Письмо, задача, заявка</li><li>Новое правило по итогам случая</li></ul></div>
+    <div class="panel lv3"><h3>Спрашивает владельца</h3><h4>Один вопрос, один повтор через 30 мин</h4><ul class="plain"><li>Цены, сроки, деньги</li><li>Доступы и закрытые сведения</li><li>Исключения из правил</li></ul></div>
+  </div>
+  <figure class="dg" data-flow="anaRoutes">
+    <figcaption><span class="cap">Как Анастасия работает сегодня<small>Главный канал — личный профиль Анастасии: пилот принимает сообщение и отправляет ответ, думает агент в OpenClaw</small></span><span class="tools"></span></figcaption>
+    <div class="viewport"><div class="sizer"><div class="canvas"><div class="flow"></div></div></div></div>
+  </figure>
+  <div class="two">
+    <div class="panel"><h3>Что проверено</h3>
+      <ul class="check">
+        <li class="ok">Живой дружеский автоответ в Telegram от профиля Анастасии</li>
+        <li class="ok">Вопрос владельцу и один повтор через 30 минут</li>
+        <li class="ok">Очередь, сборщик и бот владельца покрыты тестами на Windows и Mac</li>
+        <li class="ok">Агент в OpenClaw: не обещает цены и сроки, не выполняет команды, не читает чужие файлы</li>
+        <li class="ok">Личка Анастасии отвечает через агента OpenClaw: те же правила и память, что в боте. Живая проверка 11.11 в 23:51, ответ за 25 секунд</li>
+        <li class="ok">Инструкции на сервере, тон в Telegram владелец подтвердил</li>
+        <li class="part">На Mac: серия реплик — один ответ после 40 секунд тишины; уточнение, если ответа владельца мало</li>
+        <li class="part">Чтение почты по IMAP; подключение новых личек по согласию проверено локально</li>
+        <li class="part">Реестр дел в WEEEK: навык установлен в шлюз 16.11 и открыт только проверенным людям; у посторонних его нет — проверено. Работа с Ярославом ещё не проверена</li>
+        <li class="ok">После простоя дольше часа пилот сообщает Ярославу, сколько не работал. На сервере с 16.11</li>
+        <li class="ok">Молчание согласующего: второе напоминание через 4 часа, через сутки карточка закрывается «без ответа», собеседник получает «вернусь позже». На сервере с 16.11</li>
+      </ul></div>
+    <div class="panel"><h3>Что дальше</h3>
+      <ul class="check">
+        <li class="plan">Навыки: поручения в HerzenCRM, отправка писем, заявки; задачи в WEEEK — проверить в работе</li>
+        <li class="plan">Доступ к HerzenCRM: в первом рабочем диалоге не смогла открыть объект</li>
+        <li class="ok">Поиск по памяти работает по словам, без платного API (И-12, 19.11)</li>
+        <li class="part">Группы: с 19.11 бот Анастасии пишет в группы и отвечает коллегам; от её аккаунта — после входа</li>
+        <li class="ok">Сбой бота согласований больше не останавливает входящие (20.11)</li>
+        <li class="part">Запуск пилота после перезагрузки без входа в Windows: с 19.11 задача «при загрузке» с сохранённым паролем, как у шлюза. Настоящей перезагрузкой ещё не проверено</li>
+        <li class="ok">Классы действий утверждены 16.11: ответ с ценой, сроком, деньгами или доступом без решения Ярослава не уходит</li>
+        <li class="plan">Группы Telegram и MAX без ручного переноса</li>
+      </ul></div>
+  </div>
+</section>
+
+<!-- ============ SOB ============ -->
+<section id="sob">
+  <div class="sec-head">
+    <div class="eyebrow">Компонент 02 · процесс</div>
+    <h2>Сигналы от СОБов</h2>
+    <p>Помогает специалисту решить, звонить ли собственнику склада или производственного помещения. Продажа и аренда, Москва и область.</p>
+  </div>
+  <div class="kv">
+    <span>Площадь <b>&gt; 500 м²</b></span>
+    <span>Продажа <b>&gt; 49 млн ₽</b></span>
+    <span>Аренда <b>&gt; 500 тыс. ₽/мес</b></span>
+    <span>Поиск в CRM <b>адрес → 1 км → 5 км</b></span>
+  </div>
+  <figure class="dg" data-flow="sob">
+    <figcaption><span class="cap">Путь сигнала<small>От письма площадки до задачи в Telegram</small></span><span class="tools"></span></figcaption>
+    <div class="viewport"><div class="sizer"><div class="canvas"><div class="flow"></div></div></div></div>
+  </figure>
+  <figure class="dg" data-flow="outcomes">
+    <figcaption><span class="cap">Четыре исхода сверки<small>Что оператор записывает по каждому сигналу</small></span><span class="tools"></span></figcaption>
+    <div class="viewport"><div class="sizer"><div class="canvas"><div class="flow"></div></div></div></div>
+  </figure>
+  <div class="two">
+    <div class="panel"><h3>Что проверено</h3>
+      <ul class="check">
+        <li class="ok">Реальное письмо ЦИАН прочитано по IMAP на Windows и импортировано без дубля</li>
+        <li class="ok">Веб-очередь: персональный вход, журнал связей, 36 тестов на Windows</li>
+        <li class="ok">Подбор кандидатов по снимку CRM; связь хранится в очереди, CRM не меняется</li>
+        <li class="ok">Одна разовая доставка тестового сигнала в Telegram</li>
+        <li class="part">С 18.11 на сервере цикл «письмо ЦИАН → карточка → сообщение через Анастасию» каждые 10 минут, на пульте блок «Цикл сигналов»</li>
+        <li class="part">Активные объявления: 43 карточки ЦИАН, выборка неполная</li>
+        <li class="part">На Mac: пересверка открытых карточек по свежему снимку CRM с сохранением ручных решений, дата снимка в интерфейсе</li>
+        <li class="part">На Mac: реестр площадок — новая доска добавляется одной записью</li>
+      </ul></div>
+    <div class="panel"><h3>Что дальше</h3>
+      <ul class="check">
+        <li class="ok">Автоимпорт почты: цикл сигналов читает почту каждые 10 минут</li>
+        <li class="plan">Повреждённый снимок CRM должен давать «Нужна проверка», а не обрывать импорт</li>
+        <li class="ok">Доставка: цикл ставит сообщение Ярославу в очередь исходящих Анастасии</li>
+        <li class="ok">Пересверка и реестр площадок на сервере</li>
+        <li class="ok">Снимок CRM автоматически: с 19.11 каждую ночь выгрузкой ИИ-аналитика HerzenStats</li>
+        <li class="ok">С 19.11 Светлана разбирает карточки в Telegram цифрой или кнопкой</li>
+        <li class="part">Адрес очереди снаружи: с 19.11 временная публичная ссылка, без входа; постоянный адрес и вход — впереди</li>
+      </ul></div>
+  </div>
+</section>
+
+<!-- ============ AGENTS ============ -->
+<section id="agents">
+  <div class="sec-head">
+    <div class="eyebrow">Компонент 03 · платформа</div>
+    <h2>Среда агентов OpenClaw</h2>
+    <p>Открытый шлюз агентов: держит их запущенными, хранит память в файлах, подключает к Telegram и запускает задачи по расписанию.</p>
+  </div>
+  <div class="kv"><span>OpenClaw <b>2026.11.3</b></span><span>Учётка Windows <b>без прав администратора</b></span><span>Обновления <b>вручную, версия закреплена</b></span><span>Ответ Анастасии <b>13–28 с</b></span><span>Ответ инженера <b>32–75 с</b></span><span>Перезапуск <b>3 с</b></span></div>
+  <figure class="dg" data-flow="oc">
+    <figcaption><span class="cap">Устройство среды агентов<small>Шлюз принимает только локальные подключения</small></span><span class="tools"></span></figcaption>
+    <div class="viewport"><div class="sizer"><div class="canvas"><div class="flow"></div></div></div></div>
+  </figure>
+  <div class="panel">
+    <h3>Границы агентов</h3>
+    <div class="scroll">
+    <table class="matrix">
+      <thead><tr><th>Граница</th><th>Анастасия</th><th>Инженер песочницы</th></tr></thead>
+      <tbody>
+        <tr><td>Командная строка на сервере</td><td><span class="yes">закрыта</span></td><td><span class="yes">своя учётка без прав администратора</span></td></tr>
+        <tr><td>Файлы вне своей папки</td><td><span class="yes">отказ, проверено</span></td><td><span class="yes">шлюз и чужие папки закрыты правами Windows, проверено 16.11</span></td></tr>
+        <tr><td>Настройки шлюза</td><td><span class="yes">закрыты</span></td><td><span class="yes">закрыты</span></td></tr>
+        <tr><td>Кто может писать агенту</td><td><span class="yes">одобренные люди</span></td><td><span class="yes">одобренные люди</span></td></tr>
+        <tr><td>Цены и сроки без согласования</td><td><span class="warn">запрещены правилами, проверено</span></td><td>—</td></tr>
+        <tr><td>Самостоятельный режим</td><td>—</td><td><span class="yes">с 16.11 работает сам на отдельном узле; сторож раз в 5 минут проверяет права и при нарушении возвращает согласование</span></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ============ CATALOG ============ -->
+<section id="catalog">
+  <div class="sec-head">
+    <div class="eyebrow">Перечень модулей</div>
+    <h2>Модули, которыми можно обмениваться</h2>
+    <p>Каждая карточка — отдельный модуль: что делает, в каком состоянии и где лежит в репозитории. Метка «Можно переиспользовать» отмечает модули, которые подойдут другим процессам.</p>
+  </div>
+  <div class="filters">
+    <input id="q" type="search" placeholder="Поиск: imap, telegram, crm…" aria-label="Поиск по модулям">
+    <div class="chips" id="f-sys" role="group" aria-label="Компонент"></div>
+    <div class="chips" id="f-st" role="group" aria-label="Состояние"></div>
+    <div class="count" id="count"></div>
+  </div>
+  <div class="cards" id="cards"></div>
+</section>
+
+<!-- ============ NEXT ============ -->
+<section id="next">
+  <div class="sec-head">
+    <div class="eyebrow">Куда идём · предложение от 16 ноября, принято как направление</div>
+    <h2>Проект «ИИ-коллега»</h2>
+    <p>Анастасия работает как коллега на удалёнке: задачи ей ставят Ярослав и сотрудники через Telegram, почту и корпоративные Claude и ChatGPT. Она ничего не теряет, действует по протоколам, спрашивает согласование, а каждый сбой превращается в правило. Поиск готовых продуктов показал: замены под наши каналы нет, смена каркаса причин наших сбоев не убирает. Доводим нынешнюю систему.</p>
+  </div>
+  <div class="kv"><span>Ключ API <b>только запасной путь</b></span><span>Сервер <b>пока Windows</b></span><span>Linux <b>выдан 18.11, репетиция шлюза</b></span></div>
+  <div class="two">
+    <div class="panel lv1"><h3>Этап 1 · сейчас, на Windows и подписках</h3>
+      <ul class="check">
+        <li class="part">Сигнал жизни наружу: тревога Ярославу не позже 15 минут после остановки сервера или VPN. Пульт шлёт пинг раз в минуту, на сервере с 17.11. Сторож — Cronping, тревога в Telegram</li>
+        <li class="ok">Сообщение о простое: пилот сам говорит, сколько не работал. На сервере с 16.11</li>
+        <li class="ok">Молчание согласующего: второе напоминание через 4 часа, закрытие через сутки. На сервере с 16.11</li>
+        <li class="ok">Классы действий: без спроса, с уведомлением, только с одобрением; запреты в коде. Утверждено 16.11</li>
+        <li class="part">У каждого инцидента — автоматическая проверка. Пробелы: И-1, И-3, правило 5</li>
+        <li class="ok">Шлюз не обновляется сам: версия закреплена, новая — только через репетицию</li>
+        <li class="ok">Таблица ошибок Анастасии по понедельникам и ежедневная сводка. С 17.11</li>
+      </ul></div>
+    <div class="panel lv3"><h3>Этап 2 · когда будут сервер и ключ</h3>
+      <ul class="check">
+        <li class="part">Linux-машина ai-srv: репетиционный шлюз с 19.11, бот инженера и WEEEK уже там; дальше Анастасия, запасная очередь, коннектор</li>
+        <li class="plan">Ключ API как запасной вход, когда подписка не отвечает; сначала лимит расходов</li>
+        <li class="plan">Шаги очереди, переживающие сбой; сначала проверка на стенде</li>
+        <li class="plan">Коннектор «поставить задачу Анастасии» для корпоративных Claude и ChatGPT</li>
+      </ul></div>
+  </div>
+  <div class="panel">
+    <h3>Устройство</h3>
+    <ul class="check">
+      <li class="ok">Входы — Telegram, почта, позже Claude и ChatGPT — только записывают обращение в очередь и подтверждают приём после записи</li>
+      <li class="ok">Единая очередь пилота — главный источник; WEEEK — её отражение для людей</li>
+      <li class="plan">Codex выполняет, вторая модель проверяет результат перед отправкой наружу</li>
+      <li class="part">Страховка: пульт, сигнал жизни, сверка входящих после простоя, резервная копия очереди, лимит расходов</li>
+    </ul>
+    <span class="path mono" style="justify-self:start">docs/target-system.md</span>
+  </div>
+</section>
+
+<!-- ============ OPEN ISSUES ============ -->
+<section id="open">
+  <div class="sec-head">
+    <div class="eyebrow">Для CTO</div>
+    <h2>Открытые вопросы и риски</h2>
+    <p>По влиянию на переход от пилота к постоянной работе.</p>
+  </div>
+  <ol class="issues">
+    <li><div><b>Изоляция агентов</b><span class="d">С 12 ноября шлюз работает под отдельной учёткой Windows без прав администратора. Папка программы шлюза с 16.11 закрыта на запись для посторонних. С 16.11 команды инженера выполняет отдельный узел под своей учёткой без прав администратора: настройки и токены шлюза ему закрыты, он работает сам, без согласования каждой команды. Сторож инженера раз в 5 минут проверяет права и при нарушении сам возвращает согласование; учебная тревога 17.11 прошла. Из команд инженера открыт интернет.</span></div><span class="st ok">Сделано</span></li>
+        <li><div><b>Сервер зависит от VPN</b><span class="d">13–15 ноября сервер дважды пропадал вместе с VPN, Анастасия молчала 21 и 18,5 часа (И-5, И-6). Пульт стоит на том же сервере и об этом сообщить не может. Решение Ярослава: пока не чиним. Внешний сигнал жизни в пульте сделан и ждёт выбора сервиса; запасной путь до Telegram — только через администратора. 19 ноября туннель 17 минут висел «подключённым» без трафика (И-10). С того же дня VPN держат два сторожа: основной — сторож Глеба, переподключает VPN, если шлюз VPN не отвечает около 1,5 минуты; запасной — сторож пульта, вмешивается, только если сторож Глеба упал. Офлайн самого офиса это не лечит.</span></div><span class="st part">Риск</span></li>
+    <li><div><b>Второй сервер на Linux</b><span class="d">Вся система живёт на одной машине Windows, шлюз агентов на Windows работает нестабильно. 16 ноября администратору отправлен запрос на отдельную Linux-машину, 18 ноября Глеб её выдал, 19 ноября на ней поднят репетиционный шлюз, бот инженера уже работает оттуда. До переноса Анастасии: автозапуск шлюза, мост пилота, проверки в пульте.</span></div><span class="st part">Репетиция</span></li>
+    <li><div><b>Автозапуск после перезагрузки</b><span class="d">Настоящие перезагрузки были 14 и 15 ноября. Шлюз и панели поднимаются сами, с 19 ноября и пилот; приложения рабочего стола — только после входа в Windows. Пульт делает три попытки и сообщает о перезагрузке. 19 ноября проверочная перезагрузка по просьбе Ярослава: шлюз, сторожа и узел инженера поднялись сами за 3 минуты, узел переподключился без кода, оба бота на связи и ответили на пробный вопрос.</span></div><span class="st part">Частично</span></li>
+    <li><div><b>Учётные данные попадали в чаты</b><span class="d">Токены обоих ботов перевыпущены 12 ноября. Пароль администратора сервера сменить — отметки нет.</span></div><span class="st part">Риск</span></li>
+    <li><div><b>Старый экземпляр сервера</b><span class="d">Если старая машина ещё работает, два пилота с одним токеном бота будут мешать друг другу. Уточнить у администратора до запуска пилота.</span></div><span class="st plan">Уточнить</span></li>
+    <li><div><b>Доступы Анастасии к HerzenCRM, WEEEK и почте</b><span class="d">В первом рабочем диалоге она не смогла открыть объект в CRM. Нужны учётки с минимальными правами и правило, что она делает сама.</span></div><span class="st plan">Нужно решение</span></li>
+    <li><div><b>Слетает вход в ChatGPT (инцидент И-2)</b><span class="d">11 ноября вход был отозван, и шлюз, и пилот замолчали. Теперь пульт это видит, сам открывает повторный вход в Chrome сервера, Ярославу остаётся нажать «Продолжить». Причина не установлена; главная догадка — один вход на две программы. 12 ноября пилоту дали отдельную папку входа Codex; при этом общий вход был стёрт (И-4). Агентов шлюза под новой учёткой пульт пока не возвращает в ChatGPT сам: вход по инструкции.</span></div><span class="st part">Повторяется</span></li>
+    <li><div><b>Codex отвечает через раз</b><span class="d">Запрос без ошибки входа висит до таймаута, следующий отвечает за 12 секунд. У агентов нового шлюза часть запросов получает «модель перегружена». Причина не установлена.</span></div><span class="st part">Риск</span></li>
+    <li><div><b>Вход в Windows после перезагрузки</b><span class="d">15 ноября пилот не стартовал без входа пользователя, и Анастасия молчала до вечера. С 19 ноября пилот запускается при загрузке сервера, как шлюз, вход не нужен. После смены пароля администратора задачу пилота нужно пересохранить. Приложения рабочего стола по-прежнему открываются после входа.</span></div><span class="st part">Частично</span></li>
+    <li><div><b>Повреждённый снимок CRM прерывает импорт</b><span class="d">Сигнал теряется до создания карточки.</span></div><span class="st part">Баг</span></li>
+    <li><div><b>Сбой бота согласований блокировал входящие</b><span class="d">С 20.11 пилот работает, даже когда Telegram не отвечает боту согласований.</span></div><span class="st ok">Исправлено</span></li>
+    <li><div><b>Память и диск виртуальной машины</b><span class="d">Пульт 16 ноября: на диске 8,0 ГБ свободно после чистки 15.11; 12.11 падало до 2,1 ГБ. Старые копии плагинов шлюза теперь убираются перед каждым стартом. Нужно +8 ГБ памяти и место на диске.</span></div><span class="st part">Риск</span></li>
+    <li><div><b>Резервная копия OpenClaw неполная</b><span class="d">База состояния в копию не вошла, восстановление не проверено.</span></div><span class="st part">Риск</span></li>
+  </ol>
+</section>
+
+<!-- ============ HOW TO ============ -->
+<section id="howto">
+  <div class="sec-head">
+    <div class="eyebrow">Как добавить процесс или навык</div>
+    <h2>Путь от идеи до расписания</h2>
+  </div>
+  <div class="steps">
+    <div class="step"><b>Карточка процесса</b><span>Кто ждёт результат, какие данные, что делает код, когда нужен человек. Шаблон: <code>workflows/template.md</code></span></div>
+    <div class="step"><b>Ручные примеры</b><span>Прогнать реальные случаи, записать ожидаемый результат и случаи для человека.</span></div>
+    <div class="step"><b>Пробный прогон</b><span>Без внешних записей. Проверить повтор, сбой и восстановление тестами.</span></div>
+    <div class="step"><b>Расписание</b><span>Журнал последнего успешного запуска, результата и сбоя.</span></div>
+    <div class="step"><b>Общий модуль</b><span>Выделять адаптер, когда он понадобился второму процессу.</span></div>
+  </div>
+</section>
+
+<footer>
+  <span>Источник: репозиторий HERZEN AI Playground — README, карточки процессов и журналы проверок. Срез на 19 ноября 2026 года: каталог модулей сверен с реестром (docs/modules.md), снимок пульта и дневник инцидентов — на 19 ноября.</span>
+  <span>Оформление — дизайн-код Playground версии 2 «Сталь и свет», утверждён 19.11.2026.</span>
+  <span>Предыдущая текстовая версия: <a href="https://herzen-ai-playground-atlas.hn7dm8rpwq.chatgpt.site/" target="_blank" rel="noopener">атлас Playground</a>.</span>
+</footer>
+</div>
+
+<div id="info-bg" hidden></div>
+<aside id="info" hidden role="dialog" aria-modal="true" aria-labelledby="info-title"><div class="inner"></div></aside>
+
+<script>
+/* PULT-MAP:JS:BEGIN — схема пульта: отрисовка и просмотр на весь экран. Атлас копирует этот блок без правок (monitor/sync_atlas.py). Править только здесь. */
+const PMap = (() => {
+  const GL = {ok:"M7 12.5l3.2 3.2L17 9", warn:"M12 6.5v7M12 17v.2", fail:"M8 8l8 8M16 8l-8 8", unknown:"M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8M12 17v.2", none:"M8 12h8", off:"M9.5 8v8M14.5 8v8", plan:"M12 8v8M8 12h8"};
+  const WD = {ok:"Работает", warn:"Замечание", fail:"Сбой", unknown:"Неизвестно", none:"Не проверяется", off:"Остановлен", plan:"Запланировано"};
+  const tn = s => s === "unknown" ? "warn" : s;
+  const es = v => String(v ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const ct = (v, n) => v.length > n ? v.slice(0, n - 1).trimEnd() + "…" : v;
+  const icon = (st, z = 18, glyph) => `<svg class="ic" data-s="${tn(st)}" width="${z}" height="${z}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="${GL[glyph || st] || GL.none}"/></svg>`;
+  // Контур со срезом левого верхнего и правого нижнего углов
+  const cutPath = (x, y, w, h, c) => `M${x+c},${y}H${x+w}V${y+h-c}L${x+w-c},${y+h}H${x}V${y+c}Z`;
+  function rounded(pts, r = 10){
+    let d = `M${pts[0][0]},${pts[0][1]}`;
+    for (let i = 1; i < pts.length - 1; i++){
+      const [px,py] = pts[i-1], [x,y] = pts[i], [nx,ny] = pts[i+1];
+      const a = Math.min(r, Math.hypot(x-px, y-py)/2), b = Math.min(r, Math.hypot(nx-x, ny-y)/2);
+      d += ` L${x - Math.sign(x-px)*a},${y - Math.sign(y-py)*a} Q${x},${y} ${x + Math.sign(nx-x)*b},${y + Math.sign(ny-y)*b}`;
+    }
+    const l = pts[pts.length-1]; return d + ` L${l[0]},${l[1]}`;
+  }
+  // Вторая строка блока: у работающего с известной версией — версия, иначе состояние; самый полный вариант, что помещается
+  function line2(s, room){
+    const v = s.version;
+    if (s.status !== "ok" || !v?.current) return {text: s.summary || "", up: false};
+    const fit = list => list.find(x => x.length <= room) || list[list.length - 1];
+    if (v.newer) return {text: fit([`${v.current} → есть ${v.latest}`, `${v.current} → ${v.latest}`, `новая ${v.latest}`]), up: true};
+    return {text: fit(v.label ? [`${v.label} ${v.current}`, v.current] : [v.current]), up: false};
+  }
+  // map — раскладка из components.json (/api/map), status — /api/status. o.selected — выделенный блок, o.buttons(n, s, right, cy) — кнопки на блоке.
+  function render(svg, map, status, o = {}){
+    if (!map) return;
+    const st = {}; (status?.nodes || []).forEach(n => st[n.id] = n);
+    const plan = new Set(map.nodes.filter(n => n.planned).map(n => n.id));
+    svg.setAttribute("viewBox", `0 0 ${map.canvas.w} ${map.canvas.h}`);
+    let h = "";
+    for (const g of map.groups)
+      h += `<path class="g-box${g.inner ? " inner" : ""}${g.planned ? " plan" : ""}" d="${cutPath(g.x, g.y, g.w, g.h, 14)}"/>
+        <text class="g-title" data-g="${es(g.id)}" x="${g.x+18}" y="${g.y+27}">${es(g.title)}</text>`;
+    for (const e of map.edges){
+      const a = tn(st[e.from]?.status || "none"), b = tn(st[e.to]?.status || "none");
+      const cls = (plan.has(e.from) || plan.has(e.to)) ? "plan" : (a === "off" || b === "off") ? "" : (a === "fail" || b === "fail") ? "down" : (a === "ok" && b === "ok") ? "live" : "";
+      const d = rounded(e.path);
+      h += `<path class="edge ${cls}" d="${d}"/>` + (cls === "live" ? `<path class="edge pkt" d="${d}"/>` : "");
+    }
+    for (const n of map.nodes){
+      const p = !!n.planned, s = p ? {status: "none", summary: n.subtitle || "запланировано"} : (st[n.id] || {status: "none", summary: "нет данных"});
+      const w = n.w || 200, t = p ? "plan" : tn(s.status), word = p ? WD.plan : WD[s.status];
+      const btn = !p && o.buttons ? o.buttons(n, s, n.x + w, n.y + 44) : "";
+      const tc = Math.floor((w - 46) / 7.7), dc = Math.floor((w - 46 - (btn ? 56 : 0)) / 6.2), l2 = line2(s, dc);
+      h += `<g class="node${p ? " plan" : ""}${o.selected === n.id ? " sel" : ""}" data-s="${t}" data-id="${es(n.id)}" tabindex="0" role="button" aria-label="${es(n.title)}: ${word}, ${es(s.summary)}">
+        <title>${es(n.title)} — ${word}: ${es(s.summary)}</title>
+        <path class="card" d="${cutPath(n.x, n.y, w, 64, 7)}"/>
+        <g transform="translate(${n.x+9},${n.y+21})">${icon(p ? "none" : s.status, 22, p ? "plan" : null)}</g>
+        <text class="t" x="${n.x+38}" y="${n.y+28}">${es(ct(n.title, tc))}</text>
+        <text class="d${l2.up ? " up" : ""}" x="${n.x+38}" y="${n.y+47}">${es(ct(l2.text, dc))}</text>${btn}
+      </g>`;
+    }
+    svg.innerHTML = h;
+    fitText(svg, map);
+  }
+  // Надписи подгоняются по настоящей ширине шрифта, а не по числу знаков: на любом шрифте и экране они не вылезают за блок и рамку.
+  function fitText(svg, map){
+    const trim = (el, room) => {
+      if (!el || !(room > 0) || el.getComputedTextLength() <= room) return;
+      const full = el.textContent.replace(/…$/, "");
+      let lo = 0, hi = full.length;
+      while (lo < hi){ const mid = Math.ceil((lo + hi) / 2); el.textContent = full.slice(0, mid).trimEnd() + "…"; if (el.getComputedTextLength() <= room) lo = mid; else hi = mid - 1; }
+      el.textContent = full.slice(0, lo).trimEnd() + "…";
+    };
+    const byId = {}; map.nodes.forEach(n => byId[n.id] = n);
+    svg.querySelectorAll(".node").forEach(g => {
+      const n = byId[g.dataset.id]; if (!n) return; const w = n.w || 200, btn = g.querySelector(".nbtn") ? 56 : 0;
+      trim(g.querySelector(".t"), w - 38 - 10); trim(g.querySelector(".d"), w - 38 - 10 - btn);
+    });
+    const titles = svg.querySelectorAll(".g-title");
+    map.groups.forEach((gr, i) => { const t = titles[i]; if (!t) return; const room = gr.w - 36;
+      if (t.getComputedTextLength() > room){ t.setAttribute("textLength", room); t.setAttribute("lengthAdjust", "spacingAndGlyphs"); } });
+  }
+  // Просмотр на весь экран. frame уходит на весь экран (класс o.cls), stage — окно, content — то, что двигаем, size() — его размер без масштаба.
+  // Двигать: тянуть мышью или пальцем, колесом/двумя пальцами на тачпаде. Масштаб: щипок, Ctrl или ⌘ + колесо, + − 0, двойной клик.
+  function viewer(frame, stage, content, o = {}){
+    const cls = o.cls || "pm-fs";
+    let on = false, k = 1, x = 0, y = 0, moved = false, startX = 0, startY = 0, opener = null, mini = null;
+    const pts = new Map();
+    const box = () => stage.getBoundingClientRect();
+    // В кадре всегда остаётся не меньше 64 px схемы: её нельзя унести за край
+    function clamp(){
+      const r = box(), s = o.size(), keep = 64;
+      x = Math.min(r.width - keep, Math.max(keep - s.w*k, x));
+      y = Math.min(r.height - keep, Math.max(keep - s.h*k, y));
+    }
+    function apply(){
+      clamp(); content.style.transform = `translate(${x}px,${y}px) scale(${k})`; o.onZoom?.(k);
+      if (mini){ const r = box(); Object.assign(mini.view.style, {left: (-x/k*mini.f) + "px", top: (-y/k*mini.f) + "px",
+        width: (r.width/k*mini.f) + "px", height: (r.height/k*mini.f) + "px"}); }
+    }
+    function fit(){
+      const r = box(), s = o.size(), pad = Math.min(48, r.width * .04);
+      const side = mini && mini.el.offsetWidth ? mini.el.offsetWidth + 32 : 0;  // мини-карта справа не закрывает схему
+      k = Math.max(.2, Math.min((r.width - side - pad*2) / s.w, (r.height - pad*2) / s.h, 2));
+      x = (r.width - side - s.w*k) / 2; y = (r.height - s.h*k) / 2; apply();
+    }
+    function zoomAt(f, cx, cy){
+      const nk = Math.min(4, Math.max(.2, k * f));
+      x = cx - (cx - x) * nk / k; y = cy - (cy - y) * nk / k; k = nk; apply();
+    }
+    const center = f => { const r = box(); zoomAt(f, r.width/2, r.height/2); };
+    const local = e => { const r = box(); return [e.clientX - r.left, e.clientY - r.top]; };
+    function lookAt(cx, cy){ const r = box(); x = r.width/2 - cx*k; y = r.height/2 - cy*k; apply(); }
+    // Мини-карта: уменьшенная копия схемы и рамка видимой области; клик или протяжка переносят туда
+    function buildMini(){
+      const s = o.size(), w = 192, f = w / s.w;
+      const el = document.createElement("div"); el.className = "pm-mini"; el.setAttribute("aria-hidden", "true");
+      const inner = document.createElement("div"); inner.className = "pm-mini-in"; inner.style.width = w + "px"; inner.style.height = (s.h*f) + "px";
+      const copy = content.cloneNode(true); copy.removeAttribute("id"); copy.classList.remove("pm-content");
+      copy.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
+      Object.assign(copy.style, {transform: `scale(${f})`, width: s.w + "px", height: s.h + "px"});
+      const view = document.createElement("div"); view.className = "pm-mini-view";
+      inner.append(copy, view); el.append(inner); stage.append(el);
+      const go = e => { const r = inner.getBoundingClientRect(); lookAt((e.clientX - r.left)/f, (e.clientY - r.top)/f); };
+      el.addEventListener("pointerdown", e => { e.stopPropagation(); go(e); try { el.setPointerCapture(e.pointerId); } catch (err) {}
+        const mv = ev => go(ev), end = () => { el.removeEventListener("pointermove", mv); el.removeEventListener("pointerup", end); };
+        el.addEventListener("pointermove", mv); el.addEventListener("pointerup", end); });
+      el.addEventListener("click", e => e.stopPropagation());
+      mini = {el, view, f};
+    }
+    stage.addEventListener("wheel", e => {
+      if (!on) return; e.preventDefault();
+      if (e.ctrlKey || e.metaKey){ const [cx, cy] = local(e); zoomAt(Math.exp(-e.deltaY * (e.deltaMode ? .05 : .0025)), cx, cy); }
+      else { const m = e.deltaMode ? 16 : 1; x -= e.deltaX * m; y -= e.deltaY * m; apply(); }
+    }, {passive: false});
+    stage.addEventListener("pointerdown", e => {
+      if (!on || (e.pointerType === "mouse" && e.button !== 0)) return;
+      pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pts.size === 1){ moved = false; startX = e.clientX; startY = e.clientY; }
+    });
+    stage.addEventListener("pointermove", e => {
+      if (!on || !pts.has(e.pointerId)) return;
+      const prev = pts.get(e.pointerId), cur = [e.clientX, e.clientY];
+      if (pts.size === 1){
+        if (!moved && Math.hypot(cur[0] - startX, cur[1] - startY) > 5){ moved = true; try { stage.setPointerCapture(e.pointerId); } catch (err) {} stage.classList.add("pm-grab"); }
+        if (moved){ x += cur[0] - prev[0]; y += cur[1] - prev[1]; apply(); }
+      } else if (pts.size === 2){
+        const [a, b] = [...pts.values()], other = a === prev ? b : a;
+        const d0 = Math.hypot(prev[0] - other[0], prev[1] - other[1]), d1 = Math.hypot(cur[0] - other[0], cur[1] - other[1]);
+        const r = box(), mx = (cur[0] + other[0]) / 2 - r.left, my = (cur[1] + other[1]) / 2 - r.top;
+        if (d0 > 0) zoomAt(d1 / d0, mx, my);
+        x += (cur[0] - prev[0]) / 2; y += (cur[1] - prev[1]) / 2; apply(); moved = true;
+      }
+      pts.set(e.pointerId, cur);
+    });
+    const up = e => { pts.delete(e.pointerId); if (!pts.size) stage.classList.remove("pm-grab"); };
+    stage.addEventListener("pointerup", up); stage.addEventListener("pointercancel", up);
+    stage.addEventListener("click", e => { if (moved){ e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+    stage.addEventListener("dblclick", e => { if (!on || e.target.closest(".pm-mini")) return; const [cx, cy] = local(e); zoomAt(e.shiftKey ? 1/1.6 : 1.6, cx, cy); });
+    // Узел получил фокус с клавиатуры за краем кадра — схема подвигается к нему
+    content.addEventListener("focusin", e => {
+      if (!on) return; const el = e.target.closest("[tabindex]"); if (!el?.getBBox) return;
+      const r = box(), b = el.getBoundingClientRect();
+      if (b.left < r.left || b.right > r.right || b.top < r.top || b.bottom > r.bottom){ const bb = el.getBBox(); lookAt(bb.x + bb.width/2, bb.y + bb.height/2); }
+    });
+    document.addEventListener("keydown", e => {
+      if (!on) return;
+      if (e.key === "Tab"){  // фокус не уходит под схему
+        const list = [...frame.querySelectorAll('button,[href],[tabindex]:not([tabindex="-1"])')].filter(n => n.offsetParent !== null || n.getBBox);
+        if (!list.length) return;
+        const i = list.indexOf(document.activeElement);
+        if (i === -1 || (e.shiftKey && i === 0) || (!e.shiftKey && i === list.length - 1)){ e.preventDefault(); (e.shiftKey ? list[list.length - 1] : list[0]).focus(); }
+        return;
+      }
+      if (e.target.closest?.("input,textarea,select")) return;
+      const step = 80, keys = {"+": () => center(1.25), "=": () => center(1.25), "-": () => center(.8), "0": fit,
+        ArrowLeft: () => { x += step; apply(); }, ArrowRight: () => { x -= step; apply(); }, ArrowUp: () => { y += step; apply(); }, ArrowDown: () => { y -= step; apply(); },
+        Escape: () => close()};
+      if (keys[e.key] && !e.altKey && !e.ctrlKey && !e.metaKey){ e.preventDefault(); keys[e.key](); }
+    });
+    // Поворот и изменение окна сохраняют масштаб и точку в центре
+    let last = null;
+    window.addEventListener("resize", () => {
+      if (!on || !last) return; const r = box(), cx = (last.w/2 - x) / k, cy = (last.h/2 - y) / k;
+      last = {w: r.width, h: r.height}; lookAt(cx, cy);
+    });
+    function open(){
+      if (on) return; on = true; opener = document.activeElement;
+      frame.classList.add(cls); stage.classList.add("pm-stage-on"); document.body.classList.add("pm-locked");
+      o.onOpen?.();
+      requestAnimationFrame(() => { if (o.minimap !== false){ mini?.el.remove(); buildMini(); } fit(); const r = box(); last = {w: r.width, h: r.height}; o.focus?.focus(); });
+    }
+    function close(){
+      if (!on) return; on = false;
+      frame.classList.remove(cls); stage.classList.remove("pm-stage-on", "pm-grab"); document.body.classList.remove("pm-locked");
+      content.style.transform = ""; mini?.el.remove(); mini = null; o.onClose?.();
+      if (opener && opener.focus && document.contains(opener)) opener.focus();
+    }
+    return {open, close, toggle: () => on ? close() : open(), fit, zoomIn: () => center(1.25), zoomOut: () => center(.8), isOpen: () => on};
+  }
+  return {render, viewer, icon, cutPath, word: WD};
+})();
+/* PULT-MAP:JS:END */
+/* ---------- тема: основная тёмная, светлая включается явно; выбор хранится в браузере ---------- */
+(function(){
+  const box = document.getElementById("theme");
+  const show = t => { if (t === "light") document.documentElement.setAttribute("data-theme","light"); else document.documentElement.removeAttribute("data-theme");
+    box.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === t))); };
+  let t = "dark"; try { if (localStorage.getItem("herzen-atlas-theme") === "light") t = "light"; } catch (e) {}
+  show(t);
+  box.addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if (!b) return;
+    show(b.dataset.mode); try { localStorage.setItem("herzen-atlas-theme", b.dataset.mode); } catch (err) {} });
+})();
+/* ---------- flow diagrams: [id, col, row, title, sub, status, kind, rowspan] ; edges: [from, to, label, dashed] ---------- */
+const EYE = {dec:"Развилка", db:"Данные", person:"Человек", ai:"ИИ-помощник", end:"Итог"};
+const DG = {
+ anaCaps:{cols:4, nodes:[
+  ["tg",1,1,"Мессенджеры","Telegram; MAX пока вручную","part"],
+  ["mail",1,2,"Почта","входящие письма","part"],
+  ["own",1,3,"Поручение владельца","через бота в Telegram","ok","person"],
+  ["team",1,4,"Коллеги","рабочие чаты","plan","person"],
+  ["ana",2,1,"Анастасия","понимает обращение, помнит договорённости, следует правилам","part","ai",5],
+  ["rule",3,1,"Можно самой?","сверяет с правилами и полномочиями","ok","dec",5],
+  ["m1",4,1,"Ответить в мессенджере","живой автоответ в Telegram","part"],
+  ["m2",4,2,"Отправить письмо","сейчас только чтение","plan"],
+  ["m3",4,3,"Поручение в HerzenCRM","задача по объекту или клиенту","plan"],
+  ["m4",4,4,"Задача в WEEEK","реестр дел; только проверенным людям","part"],
+  ["m5",4,5,"Вопрос владельцу","один вопрос и повтор через 30 мин","ok","person"]],
+  edges:[["tg","ana"],["mail","ana"],["own","ana"],["team","ana","",1],["ana","rule"],
+   ["rule","m1","да"],["rule","m2","",1],["rule","m3","",1],["rule","m4","",1],["rule","m5","нужно решение"],["m5","ana","ответ владельца"]]},
+ anaRoutes:{cols:6, nodes:[
+  ["a1",1,1,"Личка Анастасии","главный канал; новые собеседники по согласию","ok"],
+  ["a2",2,1,"Telegram-пилот","принимает и отправляет от профиля Анастасии","ok","db"],
+  ["a3",3,1,"Агент Анастасии в OpenClaw","мост из пилота; запасной — Codex CLI","ok","ai"],
+  ["a4",4,1,"Ответ или вопрос","простое — отвечает сама; решение — бот владельца, повтор через 30 мин","ok","end"],
+  ["b1",1,2,"Почта и Telegram Business","входящие для разбора","part"],
+  ["b2",2,2,"Очередь","<code>collect.py</code> → <code>inbox.py</code>","ok","db"],
+  ["b3",3,2,"Разбор в Claude","скилл <code>/messengers</code>","ok","dec"],
+  ["b4",4,2,"Черновик в GPT","«Копирайтер Анастасии»","ok"],
+  ["b5",5,2,"Claude сверяет","черновик против задачи","ok"],
+  ["b6",6,2,"Оператор отправляет","из профиля Анастасии","ok","person"],
+  ["c1",1,3,"Владелец","бот Анастасии в OpenClaw; коллеги позже","part","person"],
+  ["c2",2,3,"Шлюз OpenClaw","агент Анастасии","ok"],
+  ["c3",3,3,"Правила и память","файлы в её рабочей папке","ok","db"],
+  ["c4",4,3,"Служебный бот","согласования и чат с владельцем; доступа к CRM нет","part","end"]],
+  edges:[["a1","a2"],["a2","a3"],["a3","a4"],
+   ["b1","b2"],["b2","b3"],["b3","b4"],["b4","b5"],["b5","b6"],
+   ["c1","c2"],["c2","c3"],["c3","c4"]]},
+ sob:{cols:6, nodes:[
+  ["src",1,2,"Почта площадок","реестр <code>sources.py</code> → <code>imap_collect.py</code>","part"],
+  ["crm",2,1,"Снимок HerzenCRM","ночной, 05:10: объекты и блоки","ok","db"],
+  ["in",2,2,"Импорт и пороги","<code>intake.py</code>: дубли, площадь, цена","ok","dec"],
+  ["drop",2,3,"Отсев","не прошёл пороги","ok","end"],
+  ["mkt",3,1,"Активные объявления","срез рынка, <code>market_snapshot.py</code>","part"],
+  ["enr",3,2,"Подбор кандидатов","<code>crm/enrich.py</code>; пересверка <code>rematch</code>","ok"],
+  ["rev",3,3,"Нужна проверка","данных не хватает","part","end"],
+  ["q",4,2,"Веб-очередь","<code>service.py</code> + SQLite","ok","db"],
+  ["op",5,2,"Оператор","связь: объект → корпус → блок; черновик задачи","ok","person"],
+  ["once",6,1,"Разовая отправка","<code>telegram_once.py</code>, квитанция","part"],
+  ["tg",6,3,"Личный Telegram","владелец процесса","ok","person"]],
+  edges:[["src","in"],["crm","enr"],["in","enr","проходит"],["in","drop","нет"],["in","rev","мало данных"],["mkt","enr"],
+   ["enr","q"],["q","op"],["rev","op"],["op","once","вручную"],["once","tg","1 доставка"],["op","tg","автодоставка",1]]},
+ outcomes:{cols:3, nodes:[
+  ["s",1,1,"Сигнал прошёл пороги","кандидаты из CRM подобраны","ok","dec",4],
+  ["a",2,1,"Известный объект, известный лот","","ok"],
+  ["b",2,2,"Известный объект, новый лот","","ok"],
+  ["c",2,3,"Совпадений нет","после полной сверки","ok"],
+  ["d",2,4,"Нужна проверка","данных не хватает","part"],
+  ["ra",3,1,"Записать совпадение","и основания","ok","end"],
+  ["rb",3,2,"Указать карточку CRM","и признаки нового предложения","ok","end"],
+  ["rc",3,3,"Передать на поиск","с охватом проверки","ok","end"],
+  ["rd",3,4,"Ручной разбор","доставка отложена","part","end"]],
+  edges:[["s","a"],["s","b"],["s","c"],["s","d"],["a","ra"],["b","rb"],["c","rc"],["d","rd"]]},
+ oc:{cols:4, nodes:[
+  ["tgb",1,1,"Telegram-боты агентов","оба на связи; токены перевыпустить","ok"],
+  ["cx",1,3,"Модель через Codex","вход по подписке ChatGPT","ok","db"],
+  ["gw",2,2,"Шлюз OpenClaw","только localhost; своя учётка без прав администратора","ok"],
+  ["a",3,1,"Агент «Анастасия»","без командной строки, только своя папка","ok","ai"],
+  ["s",3,3,"Инженер песочницы","каждое действие на согласовании","part"],
+  ["wa",4,1,"Папка Анастасии","правила, характер, память","ok","db"],
+  ["y",4,2,"Владелец одобряет","кнопки в Telegram","plan","person"],
+  ["ws",4,3,"Папка инженера","очередь задач, проект","ok","db"]],
+  edges:[["tgb","gw"],["cx","gw"],["gw","a"],["gw","s"],["a","wa"],["s","ws"],["s","y","запрос",1]]}
+};
+
+function buildFlow(fig){
+  const spec = DG[fig.dataset.flow], flow = fig.querySelector(".flow");
+  flow.style.gridTemplateColumns = `repeat(${spec.cols}, auto)`;
+  flow.innerHTML = spec.nodes.map(([id,c,r,t,s,st,k="box",span=1])=>
+    `<div class="nd k-${k}${st==="plan"?" is-plan":""}" data-id="${id}" style="grid-column:${c};grid-row:${r} / span ${span}">`+
+    (EYE[k]?`<span class="ey">${EYE[k]}</span>`:"")+
+    `<span class="nt"><i class="dot ${st}"></i><span>${t}</span></span>`+(s?`<span class="ns">${s}</span>`:"")+`</div>`).join("")
+    + `<svg class="edges" aria-hidden="true"></svg>`;
+}
+function drawFlow(fig){
+  // Раскладка стрелок без наложений: промежуток между колонками не уже самой широкой подписи,
+  // стрелка через колонку идёт по своему ряду и сворачивает у цели, подпись встаёт туда, где не задевает блоки, другие подписи и стрелки.
+  const key = fig.dataset.flow, spec = DG[key], flow = fig.querySelector(".flow"), svg = flow.querySelector("svg.edges");
+  flow.querySelectorAll(".lbl").forEach(x=>x.remove());
+  const col = Object.fromEntries(spec.nodes.map(n=>[n[0],n[1]]));
+  const mkLbl = (label, side, dash) => { const l=document.createElement("span"); l.className="lbl"+(side?" side":"")+(dash?" dash":""); l.textContent=label; return l; };
+  let widest = 0;
+  for (const [f,t,label,dash] of spec.edges) if (label && col[t] !== col[f]) { const l=mkLbl(label,false,dash); l.style.visibility="hidden"; flow.appendChild(l); widest=Math.max(widest,l.offsetWidth); l.remove(); }
+  flow.style.columnGap = Math.max(64, widest + 24) + "px";
+  const box = id=>{const e=flow.querySelector(`[data-id="${id}"]`);return {x:e.offsetLeft,y:e.offsetTop,w:e.offsetWidth,h:e.offsetHeight}};
+  const W = flow.offsetWidth, H = flow.offsetHeight;
+  svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  const mk = (id,c)=>`<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:${c}"/></marker>`;
+  const drawn = [];
+  for (const [f,t,label,dash] of spec.edges){
+    const s = box(f), d = box(t); let d0, pt;
+    if (col[t] > col[f]) {
+      const x0=s.x+s.w, y0=s.y+s.h/2, x3=d.x, y3=d.y+d.h/2;
+      const xs = col[t]-col[f] > 1 ? x3 - 64 : x0;  // через колонку — сначала прямо по своему ряду
+      const dx=(x3-xs)/2;
+      d0 = (xs>x0?`M${x0} ${y0}H${xs}`:`M${x0} ${y0}`)+`C${xs+dx} ${y0} ${x3-dx} ${y3} ${x3} ${y3}`;
+      pt = u => { if (xs>x0 && u < .5) return [x0+(xs-x0)*u*2, y0]; const v = xs>x0 ? (u-.5)*2 : u, m=1-v;
+        return [m*m*m*xs+3*m*m*v*(xs+dx)+3*m*v*v*(x3-dx)+v*v*v*x3, m*m*m*y0+3*m*m*v*y0+3*m*v*v*y3+v*v*v*y3]; };
+    } else if (col[t] === col[f]) {
+      const down=d.y>s.y; const x0=s.x+s.w/2, y0=down?s.y+s.h:s.y, x3=d.x+d.w/2, y3=down?d.y:d.y+d.h, dy=(y3-y0)/2;
+      d0 = `M${x0} ${y0}C${x0} ${y0+dy} ${x3} ${y3-dy} ${x3} ${y3}`;
+      pt = u => { const m=1-u; return [m*m*m*x0+3*m*m*u*x0+3*m*u*u*x3+u*u*u*x3, m*m*m*y0+3*m*m*u*(y0+dy)+3*m*u*u*(y3-dy)+u*u*u*y3]; };
+    } else {
+      const x0=s.x+s.w/2, y0=s.y+s.h, x3=d.x+d.w/2, y3=d.y+d.h, yy=Math.max(y0,y3)+70;
+      d0 = `M${x0} ${y0}C${x0} ${yy} ${x3} ${yy} ${x3} ${y3}`;
+      pt = u => { const m=1-u; return [m*m*m*x0+3*m*m*u*x0+3*m*u*u*x3+u*u*u*x3, m*m*m*y0+3*m*m*u*yy+3*m*u*u*yy+u*u*u*y3]; };
+    }
+    drawn.push({f,t,label,dash,d0,pt,same:col[t]===col[f]});
+  }
+  svg.innerHTML = `<defs>${mk(key+"-a","var(--edge)")}${mk(key+"-d","var(--none)")}</defs>` + drawn.map(e =>
+    `<path d="${e.d0}" fill="none" style="stroke:${e.dash?"var(--none)":"var(--edge)"}" stroke-width="1.6"${e.dash?' stroke-dasharray="6 5"':""} marker-end="url(#${key}-${e.dash?"d":"a"})"/>`).join("");
+  const nodes = spec.nodes.map(n=>box(n[0])), placed = [];
+  const samples = drawn.map(e => Array.from({length:41}, (_,i)=>e.pt(i/40)));
+  const area = (a,b)=>Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+  drawn.forEach((e,i) => {
+    if (!e.label) return;
+    const l = mkLbl(e.label, e.same, e.dash); flow.appendChild(l);
+    const w=l.offsetWidth, h=l.offsetHeight; let best=null;
+    for (const off of [0, -(h/2+4), h/2+4]) for (const u of [.5,.6,.4,.7,.3,.8,.2,.85,.15]) {  // на линии, над ней, под ней
+      const [cx,cy0]=e.pt(u), cy = cy0 + off, r = e.same ? {x:cx+8,y:cy-h/2,w,h} : {x:cx-w/2,y:cy-h/2,w,h};
+      let pen = 0;
+      nodes.forEach(n=>pen+=area(r,{x:n.x-4,y:n.y-4,w:n.w+8,h:n.h+8})*10);
+      placed.forEach(p=>pen+=area(r,{x:p.x-4,y:p.y-4,w:p.w+8,h:p.h+8})*10);
+      samples.forEach((ps,j)=>{ if(j!==i) ps.forEach(([x,y])=>{ if(x>r.x-3&&x<r.x+r.w+3&&y>r.y-3&&y<r.y+r.h+3) pen+=200; }); });
+      if (!best || pen < best.pen) best = {pen, r};
+    }
+    l.style.transform = "none"; l.style.left = best.r.x+"px"; l.style.top = best.r.y+"px"; placed.push(best.r);
+  });
+  const back = spec.edges.some(([f,t])=>col[t]<col[f]);
+  flow.style.paddingBottom = back ? "70px" : "18px";
+}
+
+/* ---------- fit, fullscreen, zoom ---------- */
+const ICON_X = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/></svg>';
+const ICON_C = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3l10 10M13 3L3 13"/></svg>';
+function fit(fig){
+  const vp=fig.querySelector(".viewport"), sz=fig.querySelector(".sizer"), cv=fig.querySelector(".canvas");
+  const w=cv.offsetWidth, h=cv.offsetHeight, cs=getComputedStyle(vp);
+  const aw=vp.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  const ah=vp.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  let s;
+  if (fig.classList.contains("in-fs")) return;  // на весь экран масштабом и сдвигом управляет PMap.viewer
+  s = Math.max(Math.min(1, aw/w), .6);
+  cv.style.transform=`scale(${s})`; sz.style.width=w*s+"px"; sz.style.height=h*s+"px";
+}
+function setFs(fig,on){
+  if (!fig._view){
+    const cv = fig.querySelector(".canvas"); cv.classList.add("pm-content");
+    fig._view = PMap.viewer(fig, fig.querySelector(".viewport"), cv, {cls:"in-fs", focus: fig.querySelector(".xbtn"),
+      size: () => ({w: cv.offsetWidth, h: cv.offsetHeight}),
+      onZoom: k => { fig.querySelector(".pct").textContent = Math.round(k*100) + "%"; },
+      onClose: () => { label(fig, false); fit(fig); }});
+  }
+  if (on){ fig._view.open(); label(fig, true); } else fig._view.close();
+  if (!on) label(fig, false);
+}
+function label(fig, on){
+  const b=fig.querySelector(".xbtn"); b.innerHTML = on ? ICON_C+'<span class="t">Закрыть</span>' : ICON_X+'<span class="t">На весь экран</span>';
+  b.setAttribute("aria-label", on ? "Закрыть полноэкранный режим" : "Открыть схему на весь экран");
+}
+document.addEventListener("fullscreenchange",()=>{ if(!document.fullscreenElement){ document.querySelectorAll(".dg.in-fs").forEach(f=>{ if(f._real){ f._real=false; setFs(f,false);} }); } });
+
+document.querySelectorAll(".dg").forEach((fig,i)=>{
+  if (fig.dataset.flow) buildFlow(fig);
+  fig.querySelector(".tools").innerHTML =
+    `<span class="zoom"><button class="btn" type="button" data-z="-" aria-label="Уменьшить">−</button><span class="pct">100%</span><button class="btn" type="button" data-z="+" aria-label="Увеличить">+</button><button class="btn" type="button" data-z="fit">Вписать</button></span>`+
+    `<button class="btn xbtn" type="button" id="xbtn-${i}"></button>`;
+  fig.querySelector(".xbtn").addEventListener("click",()=>setFs(fig,!fig.classList.contains("in-fs")));
+  fig.querySelectorAll("[data-z]").forEach(b=>b.addEventListener("click",()=>{
+    const z=b.dataset.z; z==="fit" ? fig._view.fit() : z==="+" ? fig._view.zoomIn() : fig._view.zoomOut();
+  }));
+  fig.querySelector(".viewport").addEventListener("dblclick",()=>{ if(!fig.classList.contains("in-fs")) setFs(fig,true); });
+  setFs(fig,false);
+  new ResizeObserver(()=>fit(fig)).observe(fig.querySelector(".viewport"));
+});
+function redrawAll(){ document.querySelectorAll(".dg[data-flow]").forEach(drawFlow); document.querySelectorAll(".dg").forEach(fit); }
+redrawAll();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(redrawAll);
+window.addEventListener("load", redrawAll);
+
+/* ---------- info cards: what / sources / process / result / open ---------- */
+const INFO = {
+ "ana":{t:"Анастасия",k:"ИИ-помощник",st:"part",sys:"ana",what:"Рабочая ИИ-персона HERZEN. Помощник, которому передают рутинные задачи: переписку, поручения, письма и заявки.",
+   src:["Лички и чаты Telegram","Входящие письма","Поручения владельца через бота","MAX — пока ручной перенос"],
+   proc:["Понять обращение и вспомнить договорённости","Сверить с правилами и полномочиями","Сделать самой, подготовить черновик или спросить владельца","Записать итог в журнал и память"],
+   res:["Ответ собеседнику","Черновик на проверку оператору","Вопрос владельцу и один повтор через 30 минут","Задача в WEEEK для проверенных людей","В планах: поручение в HerzenCRM, письмо, заявка"],
+   open:["Навыки HerzenCRM и отправки писем","Telegram-бот в OpenClaw для владельца и коллег"],path:"agents/anastasia/",rel:["ana-rules","ana-tg","owner-bot","oc-ana"]},
+ "ana-rules":{t:"Правила Анастасии",k:"Правила",st:"ok",sys:"ana",what:"Границы полномочий: что Анастасия делает сама, что готовит черновиком, что решает только владелец.",
+   src:["RULES.md и GPT-персона","Редакторские инструкции «Копирайтера»","AGENTS.md агента в OpenClaw"],
+   proc:["Сама: дружеские реплики, ответы по подтверждённым материалам","Черновик: рабочие ответы, письма, задачи","Владелец: цены, сроки, деньги, доступы, закрытые сведения, исключения"],
+   res:["Решение по каждому обращению","Обезличенные кандидаты в новые правила"],path:"workflows/messenger-inbox/RULES.md",rel:["ana","messengers"]},
+ "ana-tg":{t:"Переписка в Telegram",k:"Навык",st:"part",sys:"ana",what:"Анастасия отвечает в личках от своего профиля. Новые собеседники подключаются только после согласия.",
+   src:["Пять выбранных личек","Новые лички после согласия"],
+   proc:["Бот получает событие Telegram","Модель через Codex CLI выбирает маршрут","Простая реплика — ответ сразу","Рабочий вопрос — на разбор или владельцу"],
+   res:["Живой дружеский автоответ подтверждён","Вопрос владельцу и повтор через 30 минут подтверждены"],
+   open:["Группы через TDLib не реализованы","Работа после выхода из Windows не проверена"],path:"workflows/messenger-inbox/telegram_loop.py",rel:["tgloop","tgmodels","contacts"]},
+ "ana-mail":{t:"Почта",k:"Канал",st:"part",sys:"ana",what:"Чтение входящих писем по IMAP/TLS. Ящик открывается только на чтение.",
+   src:["Служебный почтовый ящик"],proc:["Сборщик читает письма порциями","Сохраняет позицию чтения","Кладёт карточку в очередь"],res:["Карточка письма в очереди Анастасии"],
+   open:["Фоновый импорт почты","Отправка писем"],path:"workflows/messenger-inbox/collect.py",rel:["collect","ana-mailsend"]},
+ "ana-mailsend":{t:"Отправка писем",k:"Навык · план",st:"plan",sys:"ana",what:"Анастасия отправляет письма от своего имени по согласованным шаблонам.",
+   src:["Решение по карточке","Поручение владельца"],proc:["Подготовить письмо","Отправить сразу, если правило разрешает, иначе дать оператору на проверку","Записать отправку в журнал"],
+   res:["Отправленное письмо и запись в очереди"],open:["Ящик для отправки","Правило, какие письма уходят без проверки"],rel:["ana-mail","ana-rules"]},
+ "ana-crm":{t:"Поручения в HerzenCRM",k:"Навык · план",st:"plan",sys:"ana",what:"Анастасия создаёт поручения и задачи по объекту или клиенту в HerzenCRM (herzencrm.pro).",
+   src:["Обращение в мессенджере или письме","Поручение владельца","Сигнал от СОБов"],
+   proc:["Распознать объект или клиента","Найти карточку в HerzenCRM","Создать поручение со ссылкой на источник","Сообщить исполнителю"],
+   res:["Поручение в HerzenCRM с источником"],open:["Учётка с минимальными правами","Способ подключения: API или браузер"],rel:["herzencrm","ana-rules"]},
+ "ana-weeek":{t:"Задачи и заявки в WEEEK",k:"Навык",st:"part",sys:"ana",what:"WEEEK — реестр дел Анастасии. Она ставит задачи, смотрит их, комментирует и закрывает свои. С 16 ноября навык стоит в шлюзе и открыт только проверенным людям, список ведёт Ярослав.",
+   src:["Поручения владельца","Договорённости в переписке"],
+   proc:["Сформулировать задачу: кто, что, к какому сроку","Согласовать срок с владельцем, если он не подтверждён","Создать задачу в WEEEK","Напомнить исполнителю и отметить результат"],
+   res:["Задача или заявка в WEEEK","У посторонних навыка нет — проверено"],open:["Работа с Ярославом не проверена","Правило «коллеге задачу — только по поручению Ярослава» держится на инструкции, не на коде"],path:"agents/plugins/weeek-tasks/",rel:["weeek","ana-rules"]},
+ "owner-bot":{t:"Бот владельца",k:"Бот",st:"ok",sys:"ana",what:"Личный Telegram-бот владельца для поручений, решений и согласований.",
+   src:["Вопросы из очереди","Поручения владельца"],
+   proc:["Поручение становится карточкой","Вопрос уходит только владельцу","Через 30 минут без ответа — один повтор","Ответ или /resolve записывает решение"],
+   res:["Решение в очереди","На Mac: обычная реплика засчитывается ответом на единственный открытый вопрос; если ответа мало — уточнение"],open:["Сбой бота согласований сейчас останавливает обработку входящих"],path:"workflows/messenger-inbox/owner_bot.py",rel:["ana","inbox"]},
+ "collect":{t:"Сборщик входящих",k:"Сборщик",st:"ok",sys:"ana",what:"Забирает новые сообщения и письма и приводит их к одному формату.",
+   src:["Telegram Business","Почта IMAP/TLS"],proc:["Читать порциями","Нормализовать в JSON","Сохранять позиции чтения","Импортировать через CLI очереди"],
+   res:["Карточки в очереди без дублей"],path:"workflows/messenger-inbox/collect.py",rel:["inbox","ana-mail"]},
+ "inbox":{t:"Очередь обращений",k:"Очередь",st:"ok",sys:"ana",what:"Локальная очередь обращений Анастасии: панель, CLI, журнал SQLite.",
+   src:["Сборщик","Ручной перенос из MAX и GPT-чата","Бот владельца"],
+   proc:["Новое","Вопрос владельцу и ожидание решения","Черновик","Закрыто, при необходимости кандидат в правило"],
+   res:["История и состояние каждого обращения"],path:"workflows/messenger-inbox/inbox.py",rel:["collect","messengers","owner-bot"]},
+ "messengers":{t:"Разбор в Claude · /messengers",k:"Скилл",st:"ok",sys:"ana",what:"Claude разбирает выбранную карточку по правилам и сверяет готовый черновик.",
+   src:["Карточка очереди","Правила Анастасии"],proc:["Прочитать обращение","Решить: в рамках правил или нужен владелец","Поставить задачу для GPT или один вопрос владельцу","Сверить черновик с задачей"],
+   res:["Задача для GPT или вопрос владельцу"],path:"workflows/messenger-inbox/.claude/skills/messengers/SKILL.md",rel:["copywriter","ana-rules"]},
+ "copywriter":{t:"«Копирайтер Анастасии»",k:"Проект ChatGPT",st:"ok",sys:"ana",what:"Проект ChatGPT, где GPT пишет ответы в голосе Анастасии.",
+   src:["Задача от Claude","Выдержка из переписки"],proc:["GPT пишет черновик","Claude сверяет","Оператор отправляет"],res:["Готовый ответ"],path:"workflows/messenger-inbox/editor/",rel:["messengers","operator"]},
+ "tgloop":{t:"Telegram-пилот",k:"Фоновый сервис",st:"part",sys:"ana",what:"Фоновый обработчик лички Анастасии: принимает сообщения и отправляет ответы от её профиля. Думает агент Анастасии в OpenClaw через мост.",
+   src:["События Telegram"],proc:["Планировщик запускает при загрузке сервера, вход в Windows не нужен (с 19.11)","Читает события, ведёт реестр собеседников","Выбирает маршрут, отвечает или спрашивает владельца","Пишет журнал SQLite, сверка каждые 5 минут"],
+   res:["Ответы, вопросы владельцу, журнал","На Mac: серия реплик — один ответ после 40 секунд тишины","После простоя дольше часа сообщает Ярославу его длительность","Codex берёт по ссылке на проверенную версию; новая готовится сама, переключение — с Ярославом"],open:["Запуск при загрузке настоящей перезагрузкой ещё не проверен; после смены пароля администратора задачу нужно пересохранить","Сбой бота согласований блокирует входящие","Объединение реплик на Windows не подтверждено"],path:"workflows/messenger-inbox/telegram_loop.py",rel:["tgmodels","contacts","owner-bot"]},
+ "tgmodels":{t:"Адаптер моделей",k:"Адаптер",st:"ok",sys:"ana",what:"Выбирает маршрут и пишет ответ через Codex CLI или API моделей.",
+   src:["Входящее сообщение","Контекст собеседника"],proc:["Codex CLI (GPT) выбирает маршрут","В варианте с API Claude разбирает, GPT пишет"],res:["Маршрут и текст ответа"],path:"workflows/messenger-inbox/telegram_models.py",rel:["codex","claude"]},
+ "contacts":{t:"Реестр собеседников",k:"Хранилище",st:"part",sys:"ana",what:"Состояние согласия и отдельный контекст для каждого личного диалога.",
+   src:["Новые лички","Ответ на запрос согласия"],proc:["До согласия — одно уведомление","После согласия — обработка","Отзыв согласия останавливает обработку"],res:["Профиль и журнал каждого диалога"],
+   open:["Сквозная проверка подключения новой лички"],path:"workflows/messenger-inbox/telegram_contacts.py"},
+ "operator":{t:"Оператор",k:"Человек",st:"ok",sys:"env",what:"Сотрудник, который проверяет то, что подготовили код и модели.",
+   proc:["Подтверждает связь сигнала с объектом, корпусом или блоком","Проверяет черновики и отправляет их из профиля Анастасии","Фиксирует результат в очереди"],res:["Решения с именем и временем в журнале"]},
+ "owner":{t:"Владелец",k:"Человек",st:"ok",sys:"env",what:"Ставит поручения и принимает решения за пределами полномочий агентов.",
+   proc:["Отвечает на вопросы Анастасии","Одобряет действия инженера песочницы","Утверждает новые правила"],res:["Решения, записанные в очереди"],rel:["owner-bot"]},
+ "max":{t:"MAX",k:"Канал",st:"part",sys:"env",what:"Мессенджер MAX. Автоматического подключения нет, OpenClaw его не поддерживает.",proc:["Оператор переносит обращение в очередь вручную"],open:["Мост к MAX"]},
+ "oc-bots":{t:"Telegram-боты агентов",k:"Канал",st:"ok",sys:"oc",what:"Обычные боты Анастасии и инженера песочницы в OpenClaw. Оба на связи, владелец одобрен в обоих.",
+   proc:["Новый собеседник получает код","Владелец одобряет его на сервере","Агент отвечает в личке или в разрешённой группе на обращение"],open:["Перевыпустить токены: попали в рабочий чат","Кнопки согласования инженера","Подключение коллег и рабочих групп"],rel:["oc-gw"]},
+ "oc-gw":{t:"Шлюз OpenClaw",k:"Платформа",st:"ok",sys:"oc",what:"Открытый шлюз агентов: держит их запущенными, хранит память в файлах, подключает каналы и запускает задачи по расписанию.",
+   src:["Сообщения из каналов","Расписание"],proc:["Версия 2026.11.3, автообновление выключено","Принимает только локальные подключения","Перезапускается за 3 секунды","11 ноября сам поднялся после перезагрузки сервера","19 ноября после проверочной перезагрузки поднялся сам за 3 минуты, оба бота ответили","С 12 ноября работает под отдельной учёткой Windows без прав администратора, перенос через репетицию (И-3)","Версия 2026.11.3 закреплена, обновление только через репетицию; предел работы задачи снят 15.11","С 16.11 у Анастасии навык WEEEK; папка программы шлюза закрыта на запись для посторонних"],res:["Ответы агентов"],
+   open:["Повторный вход агентов пока вручную","Резервная копия без базы состояния","На Windows известна ошибка долгого старта; Linux-сервер запрошен 16.11"],path:"agents/openclaw.fragment.json5",rel:["oc-ana","sandbox","codex"]},
+ "oc-ana":{t:"Анастасия в OpenClaw",k:"Агент",st:"ok",sys:"ana",what:"Анастасия как агент: правила, характер и память в своей рабочей папке.",
+   proc:["Не подтвердила цену и срок без владельца","Отказала на «забудь правила»","Командной строки нет, чужие файлы не читаются","Помнит запись между сессиями"],res:["Ответ за 13–28 секунд","Отвечает в служебном боте и через мост в личке Анастасии"],
+   open:["Доступ к HerzenCRM: в первом диалоге не смогла открыть объект","Поиск по памяти — по словам, без платного API (И-12)"],path:"agents/anastasia/",rel:["bridge","ana","oc-gw"]},
+ "sandbox":{t:"Инженер песочницы",k:"Агент",st:"ok",sys:"oc",what:"Агент развивает проект в своей папке и ведёт очередь задач.",
+   src:["Задачи владельца","BACKLOG.md"],proc:["С 16.11 команды выполняются на отдельном узле под своей учёткой Windows без прав администратора","Работает сам, без согласования каждой команды: граница — права учётки","Сторож инженера раз в 5 минут проверяет права; при нарушении возвращает согласование и пишет Ярославу","Отчёт в боте"],res:["Изменения в проекте, обновлённая очередь задач"],
+   open:["Из команд инженера открыт интернет"],path:"agents/sandbox/",rel:["oc-gw"]},
+ "codex":{t:"ChatGPT / Codex",k:"Модель",st:"ok",sys:"env",what:"Основная модель агентов. Вход по корпоративной подписке ChatGPT через Codex.",res:["Ответы агентов OpenClaw","Маршрут и черновики Telegram-пилота"]},
+ "claude":{t:"Claude",k:"Модель",st:"ok",sys:"env",what:"Разбор обращений, сверка черновиков, второе мнение по правилам и разработка через Claude Code."},
+ "replicate":{t:"Replicate",k:"Модель · план",st:"plan",sys:"env",what:"Доступен, пока не подключён ни к одному компоненту."},
+ "sob":{t:"Сигналы от СОБов",k:"Процесс",st:"part",sys:"sob",what:"Ловит объявления собственников складов и производственных помещений и готовит задачу специалисту.",
+   src:["Поиски ЦИАН и Авито","Снимок HerzenCRM"],proc:["Письмо площадки","Импорт и пороги","Подбор кандидатов в CRM","Оператор подтверждает связь","Черновик задачи в Telegram"],res:["Задача специалисту с результатом сверки"],
+   open:["Автоимпорт почты","Автодоставка","Повреждённый снимок CRM обрывает импорт"],rel:["imap","intake","enrich","queue"]},
+ "imap":{t:"IMAP-адаптер сигналов",k:"Адаптер",st:"part",sys:"sob",what:"Читает уведомления площадок из служебной почты.",src:["Письма ЦИАН и Авито"],
+   proc:["Вход по IMAP/TLS","Чтение писем настроенных отправителей","Курсор и повтор пакета при сбое"],res:["Пакет для импорта"],open:["Автоимпорт под учёткой Планировщика"],path:"workflows/cian-owner-service/intake/imap_collect.py",rel:["intake"]},
+ "intake":{t:"Импорт и пороги",k:"Импорт",st:"ok",sys:"sob",what:"Решает, стоит ли сигнал внимания.",src:["Пакет писем"],
+   proc:["Убрать повторы по площадке и ID","Проверить пороги: площадь больше 500 м², продажа больше 49 млн ₽, аренда больше 500 тыс. ₽/мес","Не проходит — отсев; данных мало — «Нужна проверка»"],
+   res:["Карточка сигнала"],open:["Повреждённый снимок CRM прерывает импорт до создания карточки"],path:"workflows/cian-owner-service/intake/intake.py",rel:["enrich"]},
+ "enrich":{t:"Подбор кандидатов",k:"Сверка",st:"ok",sys:"sob",what:"Ищет объект в снимке HerzenCRM.",src:["Карточка сигнала","Снимок HerzenCRM"],
+   proc:["Точный адрес и соседние здания","Кандидаты до 1 км","Оставшиеся до 5 км по координатам","Группировка: объект → корпус → блок"],res:["Список кандидатов для оператора"],path:"workflows/cian-owner-service/crm/enrich.py",rel:["herzencrm","queue"]},
+ "market":{t:"Активные объявления",k:"Рынок",st:"part",sys:"sob",what:"Отдельный срез рынка с подбором кандидатов из CRM.",src:["Выгрузка объявлений"],proc:["Загрузить срез","Исключить пересечения с «Сигналами»","Подобрать кандидатов"],
+   res:["43 карточки ЦИАН, 7 Авито вне выдачи"],open:["Выборка неполная"],path:"workflows/cian-owner-service/intake/market_snapshot.py"},
+ "queue":{t:"Веб-очередь сигналов",k:"Сервис",st:"ok",sys:"sob",what:"Рабочее место оператора. Python и SQLite без внешних зависимостей.",src:["Импорт сигналов","Кандидаты CRM"],
+   proc:["Персональный вход","Фильтры и карточки","Связь с объектом, корпусом или блоком","Журнал: кто и что изменил"],res:["Подтверждённые связи; CRM не меняется","С 19.11 доступна по публичной ссылке через cloudflared (разрешение Глеба); адрес меняется при перезапуске"],open:["По ссылке открывается без входа, от имени Ярослава — его решение «пока без авторизации»","Постоянный адрес вместо временного"],path:"workflows/cian-owner-service/service.py",rel:["operator","tgonce"]},
+ "cycle":{t:"Цикл сигналов",k:"Цикл",st:"part",sys:"sob",what:"Каждые 10 минут читает почту bot@, делает карточки и ставит сообщение Ярославу в очередь исходящих Анастасии.",src:["Письма ЦИАН в почте bot@","Снимок CRM"],
+   proc:["Задача Планировщика каждые 10 минут, повторный запуск не наслаивается","Замок от двух проходов сразу","Пока пилот лежит, сообщения копятся в очереди и не теряются","Строка в журнале на каждый проход"],res:["Сообщение владельцу через Анастасию"],open:["Сообщения уходят, только если Ярослав писал Анастасии за последние сутки"],path:"workflows/cian-owner-service/owner_cycle.py",rel:["queue","imap","monitor"]},
+ "tgonce":{t:"Разовая доставка в Telegram",k:"Доставка",st:"part",sys:"sob",what:"Отправляет готовый черновик задачи в личный Telegram.",src:["Черновик задачи"],
+   proc:["По умолчанию только показывает черновик","Перед отправкой проверяет бота и получателя","Пишет квитанцию от дублей"],res:["Одна доставка подтверждена Telegram"],open:["Связка с автоимпортом"],path:"workflows/cian-owner-service/telegram_once.py"},
+ "outcomes":{t:"Исходы сверки",k:"Решение оператора",st:"ok",sys:"sob",what:"По каждому сигналу оператор выбирает один из четырёх исходов.",
+   proc:["Известный объект, известный лот — записать совпадение","Известный объект, новый лот — карточка CRM и признаки нового предложения","Совпадений нет — передать на поиск","Нужна проверка — ручной разбор"],res:["Исход и основания в журнале"]},
+ "herzencrm":{t:"HerzenCRM",k:"Система",st:"ok",sys:"env",what:"CRM компании, herzencrm.pro.",proc:["С 19.11 ночной снимок в 05:10: две выгрузки ИИ-аналитика HerzenStats — объекты и блоки","Выгрузка идёт через Chrome агента, где bot@ вошёл в HerzenStats","После снимка очередь сигналов пересверяется","CRM в цикле не опрашиваем: она отвечает 429 и работает для коллег","Запись в CRM не ведётся"],res:["Кандидаты для «Сигналов от СОБов»","На пульте блок «Снимок CRM»: старше 26 часов — замечание, старше 48 — сбой"],open:["Поручения от Анастасии"],path:"workflows/cian-owner-service/crm/README.md",rel:["enrich","ana-crm"]},
+ "weeek":{t:"WEEEK",k:"Система",st:"part",sys:"env",what:"Таск-менеджер weeek.net и реестр дел Анастасии. У неё своя учётка в пространстве, ключ доступа выпускает только администратор WEEEK.",rel:["ana-weeek"]},
+ "cian":{t:"ЦИАН",k:"Площадка",st:"ok",sys:"sob",what:"Два сохранённых поиска «От собственника» с частотой «Мгновенно».",res:["Письма-уведомления в служебную почту"]},
+ "avito":{t:"Авито",k:"Площадка",st:"plan",sys:"sob",what:"Два поиска «Подтверждённый собственник», рассылка включена.",open:["Первое уведомление ещё не пришло"]},
+ "m2data":{t:"M2DATA",k:"Площадка",st:"pause",sys:"sob",what:"Исключён из текущего этапа."},
+ "vm":{t:"Виртуальная машина Windows",k:"Машина",st:"part",sys:"env",what:"Windows 11 Pro, 8 vCPU, 16 ГБ памяти, диск 63 ГБ. Мониторинг Zabbix.",
+   open:["Выделяемая память — узкое место: 16,5 из 19,9 ГБ","На диске 8,0 ГБ свободно после чистки 15.11 (пульт, 16.11)","Задача: +8 ГБ памяти и место на диске","Перезагрузки 14.11 и 15.11 ночью, причину знает администратор","Второй сервер на Linux запрошен 16.11"]},
+ "access":{t:"Доступ к серверу",k:"Инфраструктура",st:"ok",sys:"env",what:"VPN, RDP и SSH только по ключу; пароли для SSH отключены.",proc:["Сеть, VPN и удалённый доступ меняет только администратор","Пожелание — тикет Ярославу по форме из дневника инцидентов","С 19.11 зависший VPN переподключает сторож Глеба: раз в 30 секунд проверяет шлюз VPN, после трёх неответов подряд переподключает","Запасной сторож пульта переподключает VPN, только если сторож Глеба упал, а трафика нет дольше 30 секунд — исключение из правила по разрешению Глеба"],res:["После инцидента 11 ноября сервер работает на новом адресе, ключ SSH прежний","19.11 после перезагрузки VPN поднялся сам"],rel:["incidents"]},
+ "monitor":{t:"Пульт Playground",k:"Наблюдение и управление",st:"ok",sys:"env",what:"Раз в минуту проверяет модули сервера и показывает их на схеме. Поднимает упавшие задачи, пишет о сбоях в Telegram, запускает повторный вход в ChatGPT. Сеть, VPN и удалённый доступ не трогает.",src:["Задачи Планировщика, процессы, службы","Локальные порты и страницы","Доступ к Telegram, ChatGPT и интернету","Диск, память, время работы"],proc:["Проверить каждый модуль по списку из components.json, в том числе ответы модели","Упавшую задачу поднять сам: не больше трёх попыток в час","Красный блок дольше 5 минут — одно сообщение в Telegram, второе после починки","Через 10 минут после загрузки — отчёт, что запустилось","Кнопки: запустить, остановить, перезапустить модуль — только по просьбе Ярослава","Вторая вкладка — дневник инцидентов"],res:["Вывод: всё работает, замечания или сбои","С 19.11 сверху вид для руководителя: четыре полосы — «Анастасия · переписка», «Сигналы от СОБов», «Агенты OpenClaw», «Страховка и порядок» — с вердиктом одной строкой; подробная схема ниже","С 19.11 на дизайн-коде версии 2 «Сталь и свет»","Для агентов: python monitor.py check (код 0, 1 или 2)"],open:["Автоподъём и отчёт после настоящей перезагрузки не проверены","Не входит в Windows и не вводит пароли","Правит и выкладывает один ответственный чат"],path:"monitor/",rel:["scheduler","vm","incidents"]},
+ "browser":{t:"Браузерный агент",k:"Агент",st:"part",sys:"env",what:"Выполняет разовые поручения в браузере сервера: завести подписку, сохранить поиск, нажать кнопку в сервисе.",src:["Поручение от Ярослава"],proc:["Claude Code на сервере получает поручение","Через Playwright MCP управляет отдельным Chrome со своим профилем","Окно видно по RDP, его можно трогать руками","Вход в сервисы один раз делает человек, дальше сессии живут в профиле"],res:["19.11: на Авито сохранён поиск складов и производств с рассылкой на почту bot@"],open:["Поручения пока запускаются вручную, очереди из WEEEK и Telegram нет","Chrome работает только после входа admin в Windows","Один профиль — один Chrome: второй экземпляр портит профиль"],path:"docs/browser-agent.md",rel:["monitor","vm"]},
+ "otel":{t:"Экспорт OTel",k:"Наблюдение",st:"ok",sys:"env",what:"Отдаёт данные о работе Playground в мониторинг Глеба (APM Zabbix) по стандарту OpenTelemetry.",src:["Состояние пульта (status.json)","Журналы пилота и модулей"],proc:["Задача Планировщика раз в минуту, без входа в Windows","Один проход около секунды, постоянного процесса нет","Метрики, журналы и трассировки уходят в коллектор Глеба","Нет связи — данные копятся и уходят после восстановления"],res:["Глеб видит Playground в своём мониторинге","На пульте блок «Экспорт OTel»: свежая отправка не старше 5 минут"],open:["Коллектор доступен только через VPN","Пульт он только читает, ничего в него не пишет"],path:"workflows/otel/",rel:["monitor","vm"]},
+ "relogin":{t:"Повторный вход в ChatGPT",k:"Вход",st:"part",sys:"env",what:"Возвращает вход в ChatGPT для пилота и агентов шлюза, когда он слетает.",proc:["Пульт видит, что модель не отвечает второй круг подряд","Запускает помощник: живые входы не трогает","Открывает вход OpenAI новым окном Chrome на сервере, где открыт рабочий аккаунт агентов","Пишет Ярославу в Telegram: нажмите «Продолжить»"],res:["Вход восстановлен одной кнопкой, пароль не вводится"],open:["Полный автоматический прогон через помощника ещё не проверен","Работает только в открытом сеансе Windows","Агентов шлюза под новой учёткой помощник пока не обслуживает: вход по инструкции, Ярослав нажимает «Продолжить»","Codex пилота входит в свою отдельную папку с 12 ноября"],path:"monitor/relogin.py",rel:["monitor","incidents"]},
+ "bridge":{t:"Мост личка → OpenClaw",k:"Мост",st:"ok",sys:"ana",what:"Соединяет личный профиль Анастасии с её агентом в шлюзе: одна Анастасия, одни правила и память.",src:["Сообщение в личке Анастасии"],proc:["Пилот принимает сообщения и ждёт паузу тишины","Передаёт их агенту Анастасии в шлюзе, у каждого чата своя сессия","Агент решает: ответить, пошутить или спросить владельца","Пилот отправляет ответ от её профиля; при сбое шлюза отвечает прежний Codex"],res:["Живая проверка 11.11 в 23:51: ответ за 25 секунд, запасной путь не понадобился"],open:["Группы пока не поддерживаются"],path:"workflows/messenger-inbox/telegram_models.py",rel:["oc-ana","tgloop"]},
+ "janitor":{t:"Уборщик",k:"Эксплуатация",st:"ok",sys:"env",what:"Наводит порядок на рабочем столе сервера, чтобы забытые окна и вкладки не съедали память.",src:["Окна и вкладки в сеансе admin"],proc:["Задача «HERZEN Janitor» раз в час, работает, только если с прошлой уборки прошло 2 часа и к компьютеру не прикасались 20 минут","Закрывает лишние окна Проводника, пустые консоли, Яндекс Браузер и Edge, вкладки Chrome агента","Архивирует заметки Блокнота, ничего не удаляет","Основной Chrome не трогает: там вкладки старше 2 часов закрывает расширение Tab Wrangler, закреплённые остаются"],res:["Отчёт о последней уборке","На пульте блок «Уборщик» в основании сервера"],open:["Страхует, но не заменяет правило «Убери за собой»","Не выходит из аккаунтов и не закрывает сервисы со входом"],path:"workflows/server-janitor/",rel:["monitor","vm"]},
+ "incidents":{t:"Дневник инцидентов",k:"Эксплуатация",st:"ok",sys:"env",what:"Сбои, после которых пришлось чинить, и правила из них.",proc:["Что случилось","Что известно о причине и от кого","Чем закончилось","Какое правило появилось"],res:["И-1: потеря доступа после правок сети и VPN","И-2: отозван вход в ChatGPT, замолчали шлюз и пилот","И-3: ночной перенос шлюза на отдельную учётку не удался, днём прошёл после репетиции","И-4: стёрт общий вход Codex, когда два чата выложили один файл","Правило 1: сеть и VPN не трогаем","Правило 2: правка сети — тикет Ярославу","Правило 3: один вход в ChatGPT — одна программа","Правило 4: работающий модуль переносим через репетицию","Правило 5: файл на сервере сверяем прямо перед запуском","Открыт на пульте отдельной вкладкой"],open:["Причина И-2 не установлена","Почему Codex отвечает через раз, не установлено"],path:"docs/incidents.md",rel:["access"]},
+ "sources":{t:"Реестр площадок",k:"Реестр",st:"part",sys:"sob",what:"Все площадки описаны в одном файле. Новая доска — одна запись и функция разбора ссылки.",res:["Приём, сервис, защита страницы и интерфейс читают один реестр"],open:["Выкатить на Windows","Домены фото Авито"],path:"workflows/cian-owner-service/intake/sources.py",rel:["imap","intake"]},
+ "rematch":{t:"Пересверка rematch",k:"Сверка",st:"part",sys:"sob",what:"Заново сверяет открытые карточки из базы по свежему снимку CRM без повторного импорта.",proc:["Взять несвязанные карточки","Подобрать кандидатов по новому снимку и координатам","Сохранить ручные решения и дату снимка"],res:["Интерфейс показывает «Снимок CRM от …»"],open:["Выкатить на Windows"],path:"workflows/cian-owner-service/service.py",rel:["enrich","herzencrm"]},
+ "playbook":{t:"Инструкции Анастасии",k:"Правила",st:"ok",sys:"ana",what:"Характер, правила и сценарии ответов. Голос яркий, но дозированно и к месту.",src:["SOUL.md — кто она и как пишет","AGENTS.md — что может и чего не делает","PLAYBOOK.md — как отвечать на разные запросы"],res:["Утверждены владельцем 11 ноября","Лежат на сервере, тон в Telegram подтверждён"],path:"agents/anastasia/",rel:["oc-ana","ana-rules"]},
+ "scheduler":{t:"Планировщик Windows",k:"Запуск",st:"part",sys:"env",what:"Запускает Telegram-пилот и шлюз OpenClaw.",res:["После перезагрузки 11 ноября шлюз OpenClaw поднялся сам","Для веб-очередей и монитора созданы задачи с запуском при загрузке без входа","19.11 после проверочной перезагрузки шлюз и узел инженера поднялись сами","С 19.11 пилот тоже запускается при загрузке, без входа: пароль администратора хранит Планировщик","С 12 ноября шлюз запускает своя задача под отдельной учёткой; предел 72 часа снят 15.11"],open:["Настоящей перезагрузкой автозапуск всех модулей не проверен"]},
+ "sqlite":{t:"SQLite",k:"Хранилище",st:"ok",sys:"env",what:"У каждого процесса своя база: карточки, события, позиции чтения, квитанции."},
+ "pyservices":{t:"Python-сервисы",k:"Платформа",st:"ok",sys:"env",what:"Очереди, сборщики и боты на стандартной библиотеке Python.",rel:["queue","inbox","tgloop"]},
+ "rules-memory":{t:"Правила и память",k:"Файлы",st:"ok",sys:"env",what:"Правила, характер и память агентов лежат в файлах. Исходники в Git, рабочая память на сервере."},
+ "workshop":{t:"Мастерская",k:"Разработка",st:"ok",sys:"env",what:"На Mac ведём чаты, документацию и тесты. В Git — код, правила и обезличенные примеры, без секретов и данных клиентов."},
+ "analyst":{t:"Разбор аналитиком",k:"Цикл",st:"ok",sys:"sob",what:"Светлана Адамян, аналитик рынка, разбирает сигналы в Telegram: веб-очередь у неё не открывается.",src:["Карточки очереди «К разбору»"],proc:["Раз в 2 минуты задача Планировщика берёт одну карточку","Анастасия присылает её Светлане в служебную личку с кнопками","Ответ цифрой: 1 — новый объект, 2 — есть в CRM, 3 — не подходит, 4 — нужна проверка","Ответ записывается решением в очередь, текст — комментарием"],res:["Решения аналитика в очереди"],open:["Писать ей можно в течение суток после её последнего сообщения; молчит дольше — Ярослав получает уведомление"],path:"workflows/cian-owner-service/analyst_loop.py",rel:["queue","outbox"]},
+ "tunnel":{t:"Туннель очереди",k:"Доступ",st:"part",sys:"sob",what:"Публичная ссылка на веб-очередь через cloudflared. Второе исключение из запрета на сеть, разрешение Глеба от 19.11.",proc:["Соединение только исходящее, порты и брандмауэр не трогает","Адрес меняется при каждом перезапуске","Индексация запрещена"],open:["Вход не нужен: по ссылке очередь открывается от имени Ярослава","Постоянный адрес и вход для коллег — следующий шаг"],path:"workflows/cian-owner-service/deploy/tunnel/",rel:["queue"]},
+ "outbox":{t:"Очередь исходящих",k:"Очередь",st:"ok",sys:"ana",what:"Анастасия пишет первой: по поручению Ярослава или от другого процесса, например о новом сигнале.",proc:["В суточном окне после сообщения собеседника — через Bot API","Вне окна — от аккаунта Анастасии, не больше 30 в сутки, или от бота в группу","Ответ 429 ставит адресата на паузу","О застрявших строках Ярослав получает уведомление"],res:["Сообщения о сигналах Ярославу","Карточки Светлане в служебную личку"],open:["Вход в аккаунт Анастасии ещё не сделан: Telegram отвечал «Too many attempts»"],path:"workflows/messenger-inbox/outbox.py",rel:["tgloop","analyst"]},
+ "linux":{t:"Linux-машина ai-srv",k:"Машина · этап 2",st:"plan",sys:"env",what:"Вторая машина: Ubuntu 26.04, 4 ядра, 8 ГБ, 60 ГБ, на офисном Proxmox. Выдана Глебом 18.11, с 19.11 на ней репетиционный шлюз.",proc:["Этап 2: перенос шлюза OpenClaw по правилу репетиции","Запасная площадка очереди, не зависящая от VPN основного сервера","Адрес для коннектора корпоративных Claude и ChatGPT"],open:["Автозапуск шлюза при загрузке","Мост пилота с основного сервера","Сеть меняет только администратор"],path:"docs/modules.md",rel:["oc-gw","vm"]},
+ "release":{t:"Release.ps1",k:"Установка",st:"ok",sys:"env",what:"Устанавливает релиз на Windows.",proc:["Проверить контрольную сумму архива","Установить и запустить","Проверить состояние","Остановить при необходимости"],path:"workflows/cian-owner-service/deploy/Release.ps1"}
+};
+const NODEINFO = {
+ anaCaps:{tg:"ana-tg",mail:"ana-mail",own:"owner-bot",team:"oc-bots",ana:"ana",rule:"ana-rules",m1:"ana-tg",m2:"ana-mailsend",m3:"ana-crm",m4:"ana-weeek",m5:"owner-bot"},
+ anaRoutes:{a1:"ana-tg",a2:"tgloop",a3:"bridge",a4:"owner-bot",b1:"collect",b2:"inbox",b3:"messengers",b4:"copywriter",b5:"messengers",b6:"operator",c1:"oc-bots",c2:"oc-gw",c3:"oc-ana",c4:"oc-ana"},
+ sob:{src:"imap",crm:"herzencrm",in:"intake",drop:"intake",mkt:"market",enr:"enrich",rev:"intake",q:"queue",op:"operator",once:"tgonce",tg:"tgonce"},
+ outcomes:{s:"outcomes",a:"outcomes",b:"outcomes",c:"outcomes",d:"outcomes",ra:"outcomes",rb:"outcomes",rc:"outcomes",rd:"outcomes"},
+ oc:{tgb:"oc-bots",cx:"codex",gw:"oc-gw",a:"oc-ana",s:"sandbox",wa:"oc-ana",y:"owner",ws:"sandbox"}
+};
+const TILEINFO = {"Владелец":"owner","Оператор":"operator","Коллеги":"oc-bots","Внешние собеседники":"ana-tg","Telegram":"ana-tg","Почта":"ana-mail","MAX":"max","Веб-очередь":"queue",
+ "HerzenCRM и WEEEK":"ana-crm","Анастасия":"ana","Сигналы от СОБов":"sob","Инженер песочницы":"sandbox","OpenClaw":"oc-gw","Python-сервисы":"pyservices","Планировщик":"scheduler",
+ "SQLite":"sqlite","Правила и память":"rules-memory","Windows 11 Pro":"vm","Мониторинг":"monitor","Доступ":"access","ChatGPT / Codex":"codex","Claude":"claude","Replicate":"replicate",
+ "HerzenCRM":"herzencrm","WEEEK":"weeek","ЦИАН":"cian","Авито":"avito","M2DATA":"m2data","Mac":"workshop","Git":"workshop","VPN + SSH":"access","Release.ps1":"release","Дневник инцидентов":"incidents","Монитор Playground":"monitor","Экспорт OTel":"otel","Браузерный агент":"browser","Уборщик":"janitor","Разбор аналитиком":"analyst","Туннель очереди":"tunnel","Очередь исходящих":"outbox","Служебная личка":"outbox","Linux-машина ai-srv":"linux"};
+const CATINFO = {"Переписка в Telegram":"ana-tg","Поручения в HerzenCRM":"ana-crm","Задачи в WEEEK":"ana-weeek","Отправка писем":"ana-mailsend","Заявки":"ana-weeek",
+ "Анастасия в OpenClaw":"oc-ana","Правила и GPT-персона":"ana-rules","Инструкции Анастасии":"playbook","Реестр площадок":"sources","Пересверка rematch":"rematch","Мост личка → OpenClaw":"bridge","Повторный вход в ChatGPT":"relogin","Дневник инцидентов":"incidents","Сборщик входящих":"collect","Очередь и панель":"inbox","/messengers":"messengers","«Копирайтер Анастасии»":"copywriter",
+ "Бот владельца":"owner-bot","Адаптер моделей":"tgmodels","Реестр собеседников":"contacts","Поиски ЦИАН":"cian","Поиски Авито":"avito","M2DATA":"m2data","IMAP-адаптер сигналов":"imap",
+ "Импорт и пороги":"intake","Подбор кандидатов CRM":"enrich","Активные объявления":"market","Веб-очередь сигналов":"queue","Разовая доставка в Telegram":"tgonce","Цикл сигналов":"cycle",
+ "OpenClaw Gateway":"oc-gw","@openclaw/codex":"codex","Инженер песочницы":"sandbox","Telegram-боты агентов":"oc-bots","Виртуальная машина Windows":"vm",
+ "Планировщик Windows":"scheduler","Снимок HerzenCRM":"herzencrm","Release.ps1":"release","Дневник инцидентов":"incidents","Монитор Playground":"monitor","Экспорт OTel":"otel","Браузерный агент":"browser","Уборщик":"janitor"};
+
+const SYSN = {ana:"Анастасия", sob:"Сигналы от СОБов", oc:"Среда агентов", env:"Общая среда"};
+const STN = {ok:"Работает", part:"Частично", plan:"Запланировано", pause:"На паузе", demo:"Демо / эксперимент"};
+const escI = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let lastFocus = null;
+function openInfo(d, ctx){
+  const el = document.getElementById("info");
+  const host = document.fullscreenElement || document.body;
+  if (el.parentNode !== host) { host.appendChild(document.getElementById("info-bg")); host.appendChild(el); }
+  const list = (h,a,ol)=> a&&a.length ? `<div class="ib"><h3>${h}</h3><${ol?"ol":"ul"}>${a.map(x=>`<li>${escI(x)}</li>`).join("")}</${ol?"ol":"ul"}></div>` : "";
+  const flowCtx = ctx ? `<div class="ib"><h3>На схеме</h3><div class="io">`+
+    (ctx.inn.length?`<div><span class="muted">Получает от</span>${ctx.inn.map(x=>`<b>${escI(x)}</b>`).join("")}</div>`:"")+
+    (ctx.out.length?`<div><span class="muted">Передаёт в</span>${ctx.out.map(x=>`<b>${escI(x)}</b>`).join("")}</div>`:"")+`</div></div>` : "";
+  el.querySelector(".inner").innerHTML = `
+    <div class="ih"><span class="eyebrow">${escI(d.k||"")}${d.sys?" · "+SYSN[d.sys]:""}</span>
+      <button class="btn" type="button" id="info-close" aria-label="Закрыть карточку">✕</button></div>
+    <h2 id="info-title">${escI(d.t)}</h2>
+    <div><span class="st ${d.st}">${STN[d.st]||""}</span></div>
+    ${d.what?`<p class="iwhat">${escI(d.what)}</p>`:""}
+    ${d.live?`<div class="ib live"><h3>Проверки пульта · ${mclock(MON.generated_at)} МСК</h3><ul>${d.live.map(c=>`<li>${micon(c.status,14)} ${escI(c.title)}: ${escI(c.text)}</li>`).join("")}</ul></div>`:""}
+    ${list("Источники",d.src)}${list("Процесс",d.proc,true)}${list("Результат",d.res)}${flowCtx}
+    ${d.open&&d.open.length?`<div class="ib warn-b"><h3>Что не готово</h3><ul>${d.open.map(x=>`<li>${escI(x)}</li>`).join("")}</ul></div>`:""}
+    ${d.path?`<div class="ib"><h3>Где лежит</h3><code class="path">${escI(d.path)}</code></div>`:""}
+    ${d.rel&&d.rel.length?`<div class="ib"><h3>Связано</h3><div class="caps">${d.rel.filter(k=>INFO[k]).map(k=>`<button class="chip" type="button" data-rel="${k}">${escI(INFO[k].t)}</button>`).join("")}</div></div>`:""}`;
+  el.querySelector("#info-close").addEventListener("click", closeInfo);
+  el.querySelectorAll("[data-rel]").forEach(b=>b.addEventListener("click",()=>openInfo(INFO[b.dataset.rel])));
+  if (!el.classList.contains("open")) lastFocus = document.activeElement;
+  el.hidden = false; document.getElementById("info-bg").hidden = false;
+  requestAnimationFrame(()=>el.classList.add("open"));
+  el.scrollTop = 0; el.querySelector("#info-close").focus();
+}
+function closeInfo(){
+  const el = document.getElementById("info"); if (el.hidden) return;
+  el.classList.remove("open"); el.hidden = true; document.getElementById("info-bg").hidden = true;
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+function infoFromNode(fig, nd){
+  const key = fig.dataset.flow, id = nd.dataset.id, spec = DG[key];
+  const node = spec.nodes.find(n=>n[0]===id), title = id=>{const n=spec.nodes.find(x=>x[0]===id);return n?n[3]:id};
+  const base = INFO[(NODEINFO[key]||{})[id]] || {t:node[3], k:EYE[node[6]]||"Блок", st:node[5], what:(node[4]||"").replace(/<[^>]+>/g,"")};
+  const d = Object.assign({}, base, {t: base.t});
+  const inn = spec.edges.filter(e=>e[1]===id).map(e=>title(e[0])+(e[2]?" · "+e[2]:""));
+  const out = spec.edges.filter(e=>e[0]===id).map(e=>title(e[1])+(e[2]?" · "+e[2]:""));
+  return [d, {inn,out}];
+}
+function wireInfo(){
+  document.querySelectorAll(".dg[data-flow] .nd").forEach(nd=>{
+    nd.tabIndex = 0; nd.setAttribute("role","button");
+    const go = ()=>{const fig=nd.closest(".dg"); const [d,c]=infoFromNode(fig,nd); openInfo(d,c);};
+    nd.addEventListener("click", go);
+    nd.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();go();} });
+  });
+  document.querySelectorAll("#dg-env .tile").forEach(t=>{
+    const name = t.querySelector(".nt").textContent.trim(), key = TILEINFO[name];
+    if (!key || !INFO[key]) return;
+    if (t.tagName === "A") t.removeAttribute("href");
+    t.tabIndex = 0; t.setAttribute("role","button"); t.classList.add("clickable");
+    const go = ()=>openInfo(INFO[key]);
+    t.addEventListener("click", e=>{e.preventDefault();go();});
+    t.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();go();} });
+  });
+}
+document.addEventListener("keydown", e=>{ if (e.key==="Escape" && !document.getElementById("info").hidden){ e.stopImmediatePropagation(); closeInfo(); } }, true);
+
+wireInfo();
+document.getElementById("info-bg").addEventListener("click", closeInfo);
+
+const MON_MAP = {"canvas": {"w": 1180, "h": 1170}, "groups": [{"id": "ext", "title": "Внешние сервисы", "x": 20, "y": 20, "w": 240, "h": 570}, {"id": "win", "title": "Корпоративная Windows · рабочий контур", "x": 300, "y": 20, "w": 860, "h": 560}, {"id": "ana", "title": "Анастасия · переписка", "x": 320, "y": 92, "w": 250, "h": 460, "inner": true}, {"id": "sob", "title": "Новые сигналы от СОБов!", "x": 590, "y": 92, "w": 250, "h": 460, "inner": true}, {"id": "oc", "title": "Среда агентов", "x": 860, "y": 92, "w": 250, "h": 460, "inner": true}, {"id": "apps", "title": "Приложения рабочего стола · работают после входа в Windows", "x": 300, "y": 600, "w": 860, "h": 112}, {"id": "base", "title": "Основание сервера", "x": 20, "y": 730, "w": 1140, "h": 230}, {"id": "linux", "title": "Linux ai-srv · вторая машина", "x": 20, "y": 980, "w": 1140, "h": 170}, {"id": "linux_next", "title": "Этап 2 · заготовки", "x": 460, "y": 1012, "w": 680, "h": 120, "inner": true, "planned": true}], "nodes": [{"id": "tg", "group": "ext", "title": "Telegram Bot API", "x": 40, "y": 70, "note": "Через него работают пилот Анастасии и боты агентов."}, {"id": "gpt", "group": "ext", "title": "ChatGPT / Codex", "x": 40, "y": 200, "note": "Модели, которыми пишут ответы пилот и агенты OpenClaw."}, {"id": "net", "group": "ext", "title": "Интернет", "x": 40, "y": 350, "note": "Общий выход сервера наружу."}, {"id": "watch", "group": "ext", "title": "Сигнал жизни", "x": 40, "y": 490, "note": "Пульт раз в минуту шлёт исходящий пинг внешнему сервису-сторожу. Пинги перестали приходить — сторож сам пишет Ярославу в Telegram, даже когда сервер или VPN лежат. Адрес пинга — в heartbeat.json на сервере, не в репозитории."}, {"id": "pilot", "group": "ana", "title": "Пилот Telegram", "x": 345, "y": 140, "note": "Автоответы в личках от профиля Анастасии. Запускается при загрузке Windows, вход в систему не нужен. С 19.11 задача хранит пароль admin: после смены пароля admin её нужно пересохранить (schtasks /Change /TN \"HERZEN Anastasia Telegram Pilot\" /RP *), иначе после перезагрузки пилот не стартует."}, {"id": "inbox", "group": "ana", "title": "Панель очереди", "x": 345, "y": 260, "note": "Рабочая панель входящих. Запускается при загрузке Windows."}, {"id": "owner_cycle", "group": "sob", "title": "Цикл сигналов", "x": 615, "y": 130, "note": "Каждые 10 минут читает почту bot@ (письма ЦИАН), делает карточки и ставит сообщение Ярославу в очередь Анастасии. Пока пилот лежит, сообщения копятся в очереди и не теряются. Останавливать — только по просьбе Ярослава."}, {"id": "crm_snap", "group": "sob", "title": "Снимок CRM", "x": 615, "y": 214, "note": "Каждую ночь в 05:10 двумя запросами к выгрузке ИИ-аналитика HerzenStats снимает объекты и блоки CRM и пересверяет очередь сигналов. Работает через Chrome агента, где bot@ вошёл в HerzenStats. Слетел вход — снимок остаётся прежним, в журнале «HerzenStats просит вход». CRM в цикле не опрашивать: она отвечает 429."}, {"id": "owner", "group": "sob", "title": "Веб-очередь сигналов", "x": 615, "y": 298, "note": "Сервис «Новые сигналы от СОБов!». Запускается при загрузке Windows. Рабочее место по сигналам: карточки, сверка с CRM, решения. Снаружи открывается через блок «Туннель очереди», ответы аналитика приходят через блок «Разбор аналитиком»."}, {"id": "owner_analyst", "group": "sob", "title": "Разбор аналитиком", "x": 615, "y": 382, "note": "С 19.11 задача «HERZEN Owner Signals Analyst» раз в 2 минуты отправляет аналитику Светлане Адамян через Анастасию по одной карточке и записывает её ответ решением в очередь; состояние в state\\analyst.json. Сбой здесь — только замечание: очередь работает и без разбора."}, {"id": "owner_tunnel", "group": "sob", "title": "Туннель очереди", "x": 615, "y": 466, "note": "С 19.11 очередь открыта снаружи по публичной ссылке: задача «HERZEN Owner Signals Tunnel» (cloudflared quick tunnel, разрешение Глеба, второе исключение в AGENTS.md). Адрес меняется при каждом перезапуске туннеля и лежит на сервере в state\\tunnel-url.txt, журнал state\\logs\\tunnel.log. Доступ по ссылке без входа (решение Ярослава «пока без авторизации»): кто откроет адрес, видит и меняет очередь от имени Ярослава; индексация запрещена. Ссылку не пересылать посторонним."}, {"id": "gateway", "group": "oc", "title": "OpenClaw Gateway", "x": 885, "y": 130, "note": "Шлюз агентов под учёткой agents без прав администратора. Запускается при загрузке Windows."}, {"id": "agent_ana", "group": "oc", "title": "Анастасия", "x": 885, "y": 214, "follows": "gateway", "note": "Агент OpenClaw. Отдельно не проверяется, живёт внутри шлюза."}, {"id": "agent_eng", "group": "oc", "title": "Инженер песочницы", "x": 885, "y": 290, "follows": "gateway", "note": "Агент OpenClaw. Отдельно не проверяется, живёт внутри шлюза."}, {"id": "engnode", "group": "oc", "title": "Узел инженера", "x": 885, "y": 366, "note": "Узел OpenClaw под учёткой engineer без прав администратора: на нём выполняются команды инженера песочницы. Упал — боты работают, инженер не может выполнять команды. Запускается при загрузке Windows. Добавлен 16.11.2026 по просьбе чата шлюза."}, {"id": "app_gpt", "group": "apps", "title": "Приложение ChatGPT", "x": 325, "y": 636, "w": 190, "note": "Окно ChatGPT на рабочем столе. Запускается при входе в Windows."}, {"id": "app_claude", "group": "apps", "title": "Приложение Claude", "x": 535, "y": 636, "w": 190, "note": "Окно Claude на рабочем столе. Запускается при входе в Windows, если включён автозапуск."}, {"id": "app_tg", "group": "apps", "title": "Telegram Анастасии", "x": 745, "y": 636, "w": 190, "note": "Telegram Desktop с профилем Анастасии. Запускается при входе в Windows, если включён автозапуск."}, {"id": "browser", "group": "apps", "title": "Chrome агента", "x": 955, "y": 636, "w": 190, "note": "Отдельный Chrome со своим профилем: им Claude Code выполняет разовые поручения в браузере. Запускается при входе в Windows ярлыком из «Автозагрузки», задачи Планировщика нет. Порт управления только локальный. Не работает — стоят только браузерные поручения. Второй Chrome на тот же профиль запускать нельзя: он портит профиль. Добавлен 19.11.2026."}, {"id": "vm", "group": "base", "title": "Windows", "x": 40, "y": 788, "w": 146}, {"id": "disk", "group": "base", "title": "Диск C:", "x": 199, "y": 788, "w": 146}, {"id": "mem", "group": "base", "title": "Память", "x": 358, "y": 788, "w": 146}, {"id": "vpn", "group": "base", "title": "VPN BGVPN", "x": 517, "y": 788, "w": 146, "note": "Встроенное VPN-подключение Windows (IKEv2), поднял сисадмин 15.11.2026. Настройки VPN меняет только администратор. С 19.11 14:02 основной сторож — Глеба: задача «BGVPN AutoConnect» раз в 30 секунд пингует шлюз внутри туннеля и переподключает VPN, журнал на сервере (пишется только при событиях). Наш сторож «HERZEN VPN Guard» запасной: проверяет трафик наружу и переподключает, только если сторож Глеба мёртв, а шлюз не отвечает (И-10)."}, {"id": "remote", "group": "base", "title": "RDP и SSH", "x": 676, "y": 788, "w": 146}, {"id": "aisrv", "group": "linux", "title": "Linux ai-srv", "x": 40, "y": 1052, "note": "Вторая машина: ВМ на офисном Proxmox, Ubuntu 26.04, 4 ядра, 8 ГБ, 60 ГБ, выдал Глеб 18.11, учётка anastasia. Пока пустая; этап 2 — перенос шлюза OpenClaw и запасной очереди. Пульт только проверяет с этого сервера, что на ней отвечает SSH; адрес машины лежит в файле на сервере, не в репозитории. Сеть меняет только Глеб: нет связи — не чиним, пишем Ярославу. Сбой — только замечание."}, {"id": "lx_connector", "group": "linux", "title": "Коннектор Claude и ChatGPT", "x": 480, "y": 1052, "planned": true, "subtitle": "этап 2: адрес для коннектора", "note": "Запланировано на этап 2: «поставить задачу Анастасии» из корпоративных Claude и ChatGPT. Пока не проверяется."}, {"id": "lx_queue", "group": "linux", "title": "Запасная очередь", "x": 700, "y": 1052, "planned": true, "subtitle": "этап 2: не зависит от VPN", "note": "Запланировано на этап 2: вторая площадка очереди, которая не падает вместе с VPN основного сервера. Пока не проверяется."}, {"id": "lx_gateway", "group": "linux", "title": "Шлюз OpenClaw", "x": 920, "y": 1052, "planned": true, "subtitle": "этап 2: перенос с Windows", "note": "Запланировано на этап 2: перенос шлюза агентов с Windows по правилу репетиции. Блокер: с машины закрыт Telegram API, тикет Глебу. Пока не проверяется."}, {"id": "zabbix", "group": "base", "title": "Zabbix", "x": 835, "y": 788, "w": 146, "note": "Мониторинг администратора."}, {"id": "otel", "group": "base", "title": "Экспорт OTel", "x": 994, "y": 788, "w": 146, "note": "Раз в минуту отправляет метрики, журналы и трассировки Playground в коллектор OpenTelemetry Глеба (APM Zabbix). Коллектор доступен только через VPN: пока VPN лежит, данные копятся и уходят потом. Внешний сервис, на работу Анастасии не влияет, поэтому сбой здесь — только замечание. Пульт он только читает. Работает с 19.11."}, {"id": "janitor", "group": "base", "title": "Уборщик", "x": 40, "y": 868, "w": 146, "note": "С 19.11 раз в 2 часа (до вечера 19.11 — раз в 12) наводит порядок на рабочем столе сервера: закрывает лишние окна Проводника, пустые консоли, Яндекс Браузер и Edge, вкладки Chrome агента, архивирует заметки Блокнота, которые не правили 12 часов. Основной Chrome не трогает: там незакреплённые вкладки после 2 часов без дела закрывает расширение Tab Wrangler. Задача «HERZEN Janitor» запускается раз в час в сеансе admin и работает, только если с прошлой уборки прошло 2 часа и к компьютеру не прикасались 20 минут. Сбой — только замечание."}], "edges": [{"from": "vpn", "to": "net", "path": [[590, 788], [590, 721], [270, 721], [270, 382], [240, 382]]}, {"from": "net", "to": "gpt", "path": [[140, 350], [140, 264]]}, {"from": "net", "to": "tg", "path": [[40, 398], [29, 398], [29, 118], [40, 118]]}, {"from": "net", "to": "watch", "path": [[140, 414], [140, 490]]}, {"from": "tg", "to": "pilot", "path": [[240, 110], [280, 110], [280, 172], [345, 172]]}, {"from": "tg", "to": "gateway", "path": [[240, 90], [290, 90], [290, 72], [1065, 72], [1065, 130]]}, {"from": "gpt", "to": "pilot", "path": [[240, 232], [290, 232], [290, 190], [345, 190]]}, {"from": "gpt", "to": "gateway", "path": [[240, 250], [285, 250], [285, 566], [1135, 566], [1135, 172], [1085, 172]]}, {"from": "gateway", "to": "agent_ana", "path": [[985, 194], [985, 214]]}, {"from": "gateway", "to": "agent_eng", "path": [[885, 180], [873, 180], [873, 322], [885, 322]]}, {"from": "pilot", "to": "owner_cycle", "path": [[545, 172], [580, 172], [580, 162], [615, 162]]}, {"from": "owner_cycle", "to": "owner", "path": [[815, 162], [828, 162], [828, 330], [815, 330]]}, {"from": "crm_snap", "to": "owner", "path": [[815, 246], [828, 246], [828, 330], [815, 330]]}, {"from": "owner", "to": "owner_analyst", "path": [[715, 362], [715, 382]]}, {"from": "owner", "to": "owner_tunnel", "path": [[615, 330], [602, 330], [602, 498], [615, 498]]}, {"from": "browser", "to": "crm_snap", "path": [[1050, 636], [1050, 590], [850, 590], [850, 246], [815, 246]]}, {"from": "gateway", "to": "lx_gateway", "path": [[1085, 150], [1170, 150], [1170, 970], [1020, 970], [1020, 1052]]}, {"from": "gateway", "to": "engnode", "path": [[1085, 184], [1100, 184], [1100, 398], [1085, 398]]}], "lanes": [{"id": "ana", "title": "Анастасия · переписка", "cat": "inbox", "nodes": ["pilot", "inbox", "app_tg", "tg"]}, {"id": "sob", "title": "Сигналы от СОБов", "cat": "sob", "nodes": ["owner_cycle", "crm_snap", "owner", "owner_analyst", "owner_tunnel", "browser"]}, {"id": "oc", "title": "Агенты OpenClaw", "cat": "ai", "nodes": ["gateway", "agent_ana", "agent_eng", "engnode", "gpt", "app_gpt", "app_claude"]}, {"id": "base", "title": "Страховка и порядок", "cat": "base", "nodes": ["vm", "disk", "mem", "net", "vpn", "remote", "watch", "zabbix", "otel", "janitor", "aisrv"]}]};
+const MON = {"generated_at": "2026-11-19T21:06:56+00:00", "overall": "warn", "counts": {"ok": 27, "warn": 1, "fail": 0, "unknown": 0, "none": 0, "off": 0}, "metrics": {"boot": "2026-11-18T21:51:52.5000000Z", "uptime_seconds": 83703.872249, "disk": {"total_gb": 62.98, "name": "C:", "free_gb": 6, "quota_gb": 16}, "memory": {"free_gb": 7.01, "total_gb": 15.98}, "cpu": {"load": 9, "count": 8}, "net": {"down_mbps": 42.6, "measured_at": "2026-11-19T21:04:40+00:00"}}, "nodes": [{"id": "tg", "title": "Telegram Bot API", "group": "ext", "note": "Через него работают пилот Анастасии и боты агентов.", "status": "ok", "summary": "api.telegram.org доступен", "checks": [{"title": "Связь", "type": "reach", "status": "ok", "text": "api.telegram.org доступен"}], "actions": [], "version": null}, {"id": "gpt", "title": "ChatGPT / Codex", "group": "ext", "note": "Модели, которыми пишут ответы пилот и агенты OpenClaw.", "status": "ok", "summary": "chatgpt.com доступен", "checks": [{"title": "Связь", "type": "reach", "status": "ok", "text": "chatgpt.com доступен"}], "actions": [], "version": null}, {"id": "net", "title": "Интернет", "group": "ext", "note": "Общий выход сервера наружу.", "status": "ok", "summary": "ya.ru доступен", "checks": [{"title": "Связь", "type": "reach", "status": "ok", "text": "ya.ru доступен"}], "actions": [], "version": null}, {"id": "watch", "title": "Сигнал жизни", "group": "ext", "note": "Пульт раз в минуту шлёт исходящий пинг внешнему сервису-сторожу. Пинги перестали приходить — сторож сам пишет Ярославу в Telegram, даже когда сервер или VPN лежат. Адрес пинга — в heartbeat.json на сервере, не в репозитории.", "status": "ok", "summary": "пинг принят 0 мин назад", "checks": [{"title": "Пинг сторожу", "type": "heartbeat", "status": "ok", "text": "пинг принят 0 мин назад"}], "actions": [], "version": null}, {"id": "pilot", "title": "Пилот Telegram", "group": "ana", "note": "Автоответы в личках от профиля Анастасии. Запускается при загрузке Windows, вход в систему не нужен. С 19.11 задача хранит пароль admin: после смены пароля admin её нужно пересохранить (schtasks /Change /TN \"HERZEN Anastasia Telegram Pilot\" /RP *), иначе после перезагрузки пилот не стартует.", "status": "ok", "summary": "задача выполняется", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "задача выполняется"}, {"title": "Обработчик", "type": "process", "status": "ok", "text": "процесс работает"}, {"title": "Журнал запуска", "type": "log_last", "status": "ok", "text": "в журнале без сбоев"}, {"title": "Ответы модели", "type": "log_recent", "status": "ok", "text": "модель отвечает"}, {"title": "Очередь исходящих", "type": "sqlite", "status": "ok", "text": "застрявших сообщений нет"}, {"title": "Аккаунт Анастасии", "type": "sqlite", "status": "ok", "text": "отправлено от её аккаунта за сутки: 0"}], "actions": ["start", "stop", "restart"], "version": {"label": "Codex CLI", "current": "0.170.0", "latest": "0.170.0", "newer": false, "update": "пульт сам скачивает и проверяет новую версию, переключение и перезапуск пилота — вместе с Ярославом"}}, {"id": "inbox", "title": "Панель очереди", "group": "ana", "note": "Рабочая панель входящих. Запускается при загрузке Windows.", "status": "ok", "summary": "задача выполняется", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "задача выполняется"}, {"title": "Панель", "type": "port", "status": "ok", "text": "порт отвечает"}], "actions": ["start", "stop", "restart"], "version": null}, {"id": "owner_cycle", "title": "Цикл сигналов", "group": "sob", "note": "Каждые 10 минут читает почту bot@ (письма ЦИАН), делает карточки и ставит сообщение Ярославу в очередь Анастасии. Пока пилот лежит, сообщения копятся в очереди и не теряются. Останавливать — только по просьбе Ярослава.", "status": "ok", "summary": "запускается по расписанию", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "запускается по расписанию"}, {"title": "Журнал проходов", "type": "cycle_journal", "status": "ok", "text": "проход 7 мин назад: новых писем нет"}], "actions": [], "version": null}, {"id": "crm_snap", "title": "Снимок CRM", "group": "sob", "note": "Каждую ночь в 05:10 двумя запросами к выгрузке ИИ-аналитика HerzenStats снимает объекты и блоки CRM и пересверяет очередь сигналов. Работает через Chrome агента, где bot@ вошёл в HerzenStats. Слетел вход — снимок остаётся прежним, в журнале «HerzenStats просит вход». CRM в цикле не опрашивать: она отвечает 429.", "status": "ok", "summary": "запускается по расписанию", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "запускается по расписанию"}, {"title": "Снимок объектов", "type": "file", "status": "ok", "text": "обновлён 1 ч 51 мин назад"}], "actions": [], "version": null}, {"id": "owner", "title": "Веб-очередь сигналов", "group": "sob", "note": "Сервис «Новые сигналы от СОБов!». Запускается при загрузке Windows. Рабочее место по сигналам: карточки, сверка с CRM, решения. Снаружи открывается через блок «Туннель очереди», ответы аналитика приходят через блок «Разбор аналитиком».", "status": "ok", "summary": "задача выполняется", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "задача выполняется"}, {"title": "Сервис", "type": "http", "status": "ok", "text": "страница отвечает"}], "actions": ["start", "stop", "restart"], "version": {"label": "релиз", "current": "market-20261119-r7", "latest": null, "newer": false, "update": "вручную: Release.ps1 из репозитория"}}, {"id": "owner_analyst", "title": "Разбор аналитиком", "group": "sob", "note": "С 19.11 задача «HERZEN Owner Signals Analyst» раз в 2 минуты отправляет аналитику Светлане Адамян через Анастасию по одной карточке и записывает её ответ решением в очередь; состояние в state\\analyst.json. Сбой здесь — только замечание: очередь работает и без разбора.", "status": "ok", "summary": "запускается по расписанию", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "запускается по расписанию"}, {"title": "Ответ аналитика", "type": "json_age", "status": "ok", "text": "карточка ждёт ответа 4 ч 58 мин"}], "actions": [], "version": null}, {"id": "owner_tunnel", "title": "Туннель очереди", "group": "sob", "note": "С 19.11 очередь открыта снаружи по публичной ссылке: задача «HERZEN Owner Signals Tunnel» (cloudflared quick tunnel, разрешение Глеба, второе исключение в AGENTS.md). Адрес меняется при каждом перезапуске туннеля и лежит на сервере в state\\tunnel-url.txt, журнал state\\logs\\tunnel.log. Доступ по ссылке без входа (решение Ярослава «пока без авторизации»): кто откроет адрес, видит и меняет очередь от имени Ярослава; индексация запрещена. Ссылку не пересылать посторонним.", "status": "ok", "summary": "задача выполняется", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "задача выполняется"}, {"title": "Публичная ссылка", "type": "http", "status": "ok", "text": "публичная ссылка отвечает"}], "actions": [], "version": null}, {"id": "gateway", "title": "OpenClaw Gateway", "group": "oc", "note": "Шлюз агентов под учёткой agents без прав администратора. Запускается при загрузке Windows.", "status": "ok", "summary": "задача выполняется", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "задача выполняется"}, {"title": "Шлюз", "type": "port", "status": "ok", "text": "порт отвечает"}, {"title": "Ответы модели", "type": "log_recent", "status": "ok", "text": "модель отвечает"}], "actions": ["start", "stop", "restart"], "version": {"label": "OpenClaw", "current": "2026.11.3", "latest": "2026.11.5", "newer": true, "update": "вручную через чат шлюза: шлюз работает под учёткой agents, автообновление OpenClaw выключено"}}, {"id": "agent_ana", "title": "Анастасия", "group": "oc", "note": "Агент OpenClaw. Отдельно не проверяется, живёт внутри шлюза.", "status": "ok", "summary": "работает через шлюз", "checks": [], "actions": [], "version": null}, {"id": "agent_eng", "title": "Инженер песочницы", "group": "oc", "note": "Агент OpenClaw. Отдельно не проверяется, живёт внутри шлюза.", "status": "ok", "summary": "работает через шлюз", "checks": [], "actions": [], "version": null}, {"id": "engnode", "title": "Узел инженера", "group": "oc", "note": "Узел OpenClaw под учёткой engineer без прав администратора: на нём выполняются команды инженера песочницы. Упал — боты работают, инженер не может выполнять команды. Запускается при загрузке Windows. Добавлен 16.11.2026 по просьбе чата шлюза.", "status": "ok", "summary": "задача выполняется", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "задача выполняется"}, {"title": "Узел", "type": "process", "status": "ok", "text": "процесс работает"}, {"title": "Сторож инженера", "type": "guard", "status": "ok", "text": "граница цела, режим full"}], "actions": ["start", "stop", "restart"], "version": null}, {"id": "app_gpt", "title": "Приложение ChatGPT", "group": "apps", "note": "Окно ChatGPT на рабочем столе. Запускается при входе в Windows.", "status": "ok", "summary": "процесс работает", "checks": [{"title": "Приложение", "type": "process", "status": "ok", "text": "процесс работает"}], "actions": [], "version": {"label": "", "current": "26.1111.9664.0", "latest": null, "newer": false, "update": "само, через Microsoft Store"}}, {"id": "app_claude", "title": "Приложение Claude", "group": "apps", "note": "Окно Claude на рабочем столе. Запускается при входе в Windows, если включён автозапуск.", "status": "ok", "summary": "процесс работает", "checks": [{"title": "Приложение", "type": "process", "status": "ok", "text": "процесс работает"}], "actions": [], "version": {"label": "", "current": "6.6395.0.0", "latest": null, "newer": false, "update": "само, через Microsoft Store"}}, {"id": "app_tg", "title": "Telegram Анастасии", "group": "apps", "note": "Telegram Desktop с профилем Анастасии. Запускается при входе в Windows, если включён автозапуск.", "status": "ok", "summary": "процесс работает", "checks": [{"title": "Приложение", "type": "process", "status": "ok", "text": "процесс работает"}], "actions": [], "version": {"label": "", "current": "7.4.4.0", "latest": "7.4.4", "newer": false, "update": "само: встроенное обновление Telegram Desktop"}}, {"id": "browser", "title": "Chrome агента", "group": "apps", "note": "Отдельный Chrome со своим профилем: им Claude Code выполняет разовые поручения в браузере. Запускается при входе в Windows ярлыком из «Автозагрузки», задачи Планировщика нет. Порт управления только локальный. Не работает — стоят только браузерные поручения. Второй Chrome на тот же профиль запускать нельзя: он портит профиль. Добавлен 19.11.2026.", "status": "ok", "summary": "процесс работает", "checks": [{"title": "Процесс", "type": "process", "status": "ok", "text": "процесс работает"}, {"title": "Управление", "type": "http", "status": "ok", "text": "страница отвечает"}], "actions": [], "version": null}, {"id": "vm", "title": "Windows", "group": "base", "note": "", "status": "ok", "summary": "работает 23 ч 15 мин", "checks": [{"title": "Время работы", "type": "uptime", "status": "ok", "text": "работает 23 ч 15 мин"}], "actions": [], "version": {"label": "Windows 11", "current": "25H2 (26200.9974)", "latest": null, "newer": false, "update": "Центр обновления Windows, решает администратор"}}, {"id": "disk", "title": "Диск C:", "group": "base", "note": "", "status": "warn", "summary": "свободно 6,0 ГБ", "checks": [{"title": "Свободное место", "type": "disk", "status": "warn", "text": "свободно 6,0 ГБ"}], "actions": [], "version": null}, {"id": "mem", "title": "Память", "group": "base", "note": "", "status": "ok", "summary": "свободно 7,0 ГБ", "checks": [{"title": "Свободная память", "type": "memory", "status": "ok", "text": "свободно 7,0 ГБ"}], "actions": [], "version": null}, {"id": "vpn", "title": "VPN BGVPN", "group": "base", "note": "Встроенное VPN-подключение Windows (IKEv2), поднял сисадмин 15.11.2026. Настройки VPN меняет только администратор. С 19.11 14:02 основной сторож — Глеба: задача «BGVPN AutoConnect» раз в 30 секунд пингует шлюз внутри туннеля и переподключает VPN, журнал на сервере (пишется только при событиях). Наш сторож «HERZEN VPN Guard» запасной: проверяет трафик наружу и переподключает, только если сторож Глеба мёртв, а шлюз не отвечает (И-10).", "status": "ok", "summary": "подключено", "checks": [{"title": "Подключение", "type": "vpn", "status": "ok", "text": "подключено"}, {"title": "Служба удалённого доступа", "type": "service", "status": "ok", "text": "служба работает"}, {"title": "Сторож Глеба", "type": "task", "status": "ok", "text": "задача выполняется"}, {"title": "Процесс сторожа Глеба", "type": "process", "status": "ok", "text": "процесс работает"}, {"title": "Трафик и запасной сторож", "type": "vpn_guard", "status": "ok", "text": "трафик идёт"}], "actions": [], "version": null}, {"id": "remote", "title": "RDP и SSH", "group": "base", "note": "", "status": "ok", "summary": "порт отвечает", "checks": [{"title": "Удалённый рабочий стол", "type": "port", "status": "ok", "text": "порт отвечает"}, {"title": "SSH", "type": "service", "status": "ok", "text": "служба работает"}], "actions": [], "version": null}, {"id": "aisrv", "title": "Linux ai-srv", "group": "linux", "note": "Вторая машина: ВМ на офисном Proxmox, Ubuntu 26.04, 4 ядра, 8 ГБ, 60 ГБ, выдал Глеб 18.11, учётка anastasia. Пока пустая; этап 2 — перенос шлюза OpenClaw и запасной очереди. Пульт только проверяет с этого сервера, что на ней отвечает SSH; адрес машины лежит в файле на сервере, не в репозитории. Сеть меняет только Глеб: нет связи — не чиним, пишем Ярославу. Сбой — только замечание.", "status": "ok", "summary": "SSH отвечает", "checks": [{"title": "SSH с этого сервера", "type": "port", "status": "ok", "text": "SSH отвечает"}], "actions": [], "version": null}, {"id": "lx_connector", "title": "Коннектор Claude и ChatGPT", "group": "linux", "note": "Запланировано на этап 2: «поставить задачу Анастасии» из корпоративных Claude и ChatGPT. Пока не проверяется.", "status": "none", "summary": "этап 2: адрес для коннектора", "checks": [], "actions": [], "version": null, "planned": true}, {"id": "lx_queue", "title": "Запасная очередь", "group": "linux", "note": "Запланировано на этап 2: вторая площадка очереди, которая не падает вместе с VPN основного сервера. Пока не проверяется.", "status": "none", "summary": "этап 2: не зависит от VPN", "checks": [], "actions": [], "version": null, "planned": true}, {"id": "lx_gateway", "title": "Шлюз OpenClaw", "group": "linux", "note": "Запланировано на этап 2: перенос шлюза агентов с Windows по правилу репетиции. Блокер: с машины закрыт Telegram API, тикет Глебу. Пока не проверяется.", "status": "none", "summary": "этап 2: перенос с Windows", "checks": [], "actions": [], "version": null, "planned": true}, {"id": "zabbix", "title": "Zabbix", "group": "base", "note": "Мониторинг администратора.", "status": "ok", "summary": "работает «Zabbix Agent 2»", "checks": [{"title": "Агент", "type": "service", "status": "ok", "text": "работает «Zabbix Agent 2»"}], "actions": [], "version": {"label": "Agent 2", "current": "8.0.0", "latest": null, "newer": false, "update": "только администратор"}}, {"id": "otel", "title": "Экспорт OTel", "group": "base", "note": "Раз в минуту отправляет метрики, журналы и трассировки Playground в коллектор OpenTelemetry Глеба (APM Zabbix). Коллектор доступен только через VPN: пока VPN лежит, данные копятся и уходят потом. Внешний сервис, на работу Анастасии не влияет, поэтому сбой здесь — только замечание. Пульт он только читает. Работает с 19.11.", "status": "ok", "summary": "запускается по расписанию", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "запускается по расписанию"}, {"title": "Журнал отправки", "type": "log_last", "status": "ok", "text": "данные приняты, 0 мин назад"}], "actions": [], "version": null}, {"id": "janitor", "title": "Уборщик", "group": "base", "note": "С 19.11 раз в 2 часа (до вечера 19.11 — раз в 12) наводит порядок на рабочем столе сервера: закрывает лишние окна Проводника, пустые консоли, Яндекс Браузер и Edge, вкладки Chrome агента, архивирует заметки Блокнота, которые не правили 12 часов. Основной Chrome не трогает: там незакреплённые вкладки после 2 часов без дела закрывает расширение Tab Wrangler. Задача «HERZEN Janitor» запускается раз в час в сеансе admin и работает, только если с прошлой уборки прошло 2 часа и к компьютеру не прикасались 20 минут. Сбой — только замечание.", "status": "ok", "summary": "запускается по расписанию", "checks": [{"title": "Задача Планировщика", "type": "task", "status": "ok", "text": "запускается по расписанию"}, {"title": "Последняя уборка", "type": "file", "status": "ok", "text": "была 52 мин назад"}], "actions": [], "version": null}], "events": [{"at": "2026-11-19T19:15:07+00:00", "node": "crm_snap", "title": "Снимок CRM", "from": "warn", "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T16:34:56+00:00", "node": "watch", "title": "Сигнал жизни", "from": "warn", "to": "ok", "text": "пинг принят 0 мин назад"}, {"at": "2026-11-19T16:33:51+00:00", "node": "watch", "title": "Сигнал жизни", "from": "ok", "to": "warn", "text": "пинг не прошёл (нет связи со сторожем), удачный 1 мин назад"}, {"at": "2026-11-19T16:27:17+00:00", "node": "crm_snap", "title": "Снимок CRM", "from": "ok", "to": "warn", "text": "последний запуск завершился с кодом 1"}, {"at": "2026-11-19T15:28:09+00:00", "node": "lx_gateway", "title": "Шлюз OpenClaw", "from": null, "to": "none", "text": "этап 2: перенос с Windows"}, {"at": "2026-11-19T15:28:09+00:00", "node": "lx_queue", "title": "Запасная очередь", "from": null, "to": "none", "text": "этап 2: не зависит от VPN"}, {"at": "2026-11-19T15:28:09+00:00", "node": "lx_connector", "title": "Коннектор Claude и ChatGPT", "from": null, "to": "none", "text": "этап 2: адрес для коннектора"}, {"at": "2026-11-19T15:01:53+00:00", "node": "aisrv", "title": "Linux ai-srv", "from": null, "to": "ok", "text": "SSH отвечает"}, {"at": "2026-11-19T14:53:22+00:00", "node": "agent_eng", "title": "Инженер песочницы", "from": "fail", "to": "ok", "text": "работает через шлюз"}, {"at": "2026-11-19T14:53:22+00:00", "node": "agent_ana", "title": "Анастасия", "from": "fail", "to": "ok", "text": "работает через шлюз"}, {"at": "2026-11-19T14:53:22+00:00", "node": "gateway", "title": "OpenClaw Gateway", "from": "fail", "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T14:52:17+00:00", "node": "agent_eng", "title": "Инженер песочницы", "from": "ok", "to": "fail", "text": "зависит от «OpenClaw Gateway»"}, {"at": "2026-11-19T14:52:17+00:00", "node": "agent_ana", "title": "Анастасия", "from": "ok", "to": "fail", "text": "зависит от «OpenClaw Gateway»"}, {"at": "2026-11-19T14:52:17+00:00", "node": "gateway", "title": "OpenClaw Gateway", "from": "ok", "to": "fail", "text": "порт не отвечает"}, {"at": "2026-11-19T14:50:05+00:00", "node": "agent_eng", "title": "Инженер песочницы", "from": "fail", "to": "ok", "text": "работает через шлюз"}, {"at": "2026-11-19T14:50:05+00:00", "node": "agent_ana", "title": "Анастасия", "from": "fail", "to": "ok", "text": "работает через шлюз"}, {"at": "2026-11-19T14:50:05+00:00", "node": "gateway", "title": "OpenClaw Gateway", "from": "fail", "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T14:49:00+00:00", "node": "agent_eng", "title": "Инженер песочницы", "from": "ok", "to": "fail", "text": "зависит от «OpenClaw Gateway»"}, {"at": "2026-11-19T14:49:00+00:00", "node": "agent_ana", "title": "Анастасия", "from": "ok", "to": "fail", "text": "зависит от «OpenClaw Gateway»"}, {"at": "2026-11-19T14:49:00+00:00", "node": "gateway", "title": "OpenClaw Gateway", "from": "ok", "to": "fail", "text": "порт не отвечает"}, {"at": "2026-11-19T14:23:29+00:00", "node": "pilot", "title": "Пилот Telegram", "from": "fail", "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T14:22:30+00:00", "node": "pilot", "title": "Пилот Telegram", "from": "fail", "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T14:22:24+00:00", "node": "pilot", "title": "Пилот Telegram", "from": null, "to": "control", "text": "запущен автоматически (попытка 1 из 3)"}, {"at": "2026-11-19T14:22:23+00:00", "node": "pilot", "title": "Пилот Telegram", "from": "ok", "to": "fail", "text": "задача не выполняется (код последнего запуска 267014)"}, {"at": "2026-11-19T14:22:21+00:00", "node": "pilot", "title": "Пилот Telegram", "from": null, "to": "control", "text": "перезапущен с пульта"}, {"at": "2026-11-19T14:02:48+00:00", "node": "owner_tunnel", "title": "Туннель очереди", "from": "warn", "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T14:01:43+00:00", "node": "owner_tunnel", "title": "Туннель очереди", "from": "ok", "to": "warn", "text": "публичная ссылка не отвечает"}, {"at": "2026-11-19T13:42:03+00:00", "node": "app_gpt", "title": "Приложение ChatGPT", "from": "warn", "to": "ok", "text": "процесс работает"}, {"at": "2026-11-19T13:39:53+00:00", "node": "app_gpt", "title": "Приложение ChatGPT", "from": "ok", "to": "warn", "text": "процесс не найден"}, {"at": "2026-11-19T13:34:28+00:00", "node": "owner_tunnel", "title": "Туннель очереди", "from": "warn", "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T13:33:23+00:00", "node": "owner_tunnel", "title": "Туннель очереди", "from": "ok", "to": "warn", "text": "публичная ссылка не отвечает"}, {"at": "2026-11-19T13:18:06+00:00", "node": "agent_eng", "title": "Инженер песочницы", "from": "fail", "to": "ok", "text": "работает через шлюз"}, {"at": "2026-11-19T13:18:06+00:00", "node": "agent_ana", "title": "Анастасия", "from": "fail", "to": "ok", "text": "работает через шлюз"}, {"at": "2026-11-19T13:18:06+00:00", "node": "gateway", "title": "OpenClaw Gateway", "from": "fail", "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T13:13:46+00:00", "node": "janitor", "title": "Уборщик", "from": null, "to": "ok", "text": "запускается по расписанию"}, {"at": "2026-11-19T13:13:46+00:00", "node": "owner_tunnel", "title": "Туннель очереди", "from": null, "to": "ok", "text": "задача выполняется"}, {"at": "2026-11-19T13:13:46+00:00", "node": "owner_analyst", "title": "Разбор аналитиком", "from": null, "to": "ok", "text": "запускается по расписанию"}, {"at": "2026-11-19T13:02:16+00:00", "node": "gateway", "title": "OpenClaw Gateway", "from": null, "to": "control", "text": "пульт запустил повторный вход в ChatGPT, просьба нажать «Продолжить» придёт в Telegram"}, {"at": "2026-11-19T12:50:23+00:00", "node": "agent_eng", "title": "Инженер песочницы", "from": "ok", "to": "fail", "text": "зависит от «OpenClaw Gateway»"}, {"at": "2026-11-19T12:50:23+00:00", "node": "agent_ana", "title": "Анастасия", "from": "ok", "to": "fail", "text": "зависит от «OpenClaw Gateway»"}, {"at": "2026-11-19T12:50:23+00:00", "node": "gateway", "title": "OpenClaw Gateway", "from": "ok", "to": "fail", "text": "слетел вход в ChatGPT у шлюза. Пульт сам запустит вход через сторожа под учёткой agents и попросит Ярослава нажать «Продолжить»"}, {"at": "2026-11-19T12:36:27+00:00", "node": "pilot", "title": "Пилот Telegram", "from": null, "to": "control", "text": "перезапущен с пульта"}, {"at": "2026-11-19T12:24:10+00:00", "node": "pilot", "title": "Пилот Telegram", "from": null, "to": "control", "text": "перезапущен с пульта"}, {"at": "2026-11-19T12:12:40+00:00", "node": "pilot", "title": "Пилот Telegram", "from": null, "to": "control", "text": "перезапущен с пульта"}, {"at": "2026-11-19T12:08:30+00:00", "node": "pilot", "title": "Пилот Telegram", "from": null, "to": "control", "text": "перезапущен с пульта"}, {"at": "2026-11-19T11:34:49+00:00", "node": "pilot", "title": "Пилот Telegram", "from": null, "to": "control", "text": "перезапущен с пульта"}, {"at": "2026-11-19T11:18:00+00:00", "node": "pilot", "title": "Пилот Telegram", "from": null, "to": "control", "text": "перезапущен с пульта"}, {"at": "2026-11-19T11:12:56+00:00", "node": "disk", "title": "Диск C:", "from": "fail", "to": "warn", "text": "свободно 3,4 ГБ"}, {"at": "2026-11-19T11:11:52+00:00", "node": "disk", "title": "Диск C:", "from": "warn", "to": "fail", "text": "свободно 3,0 ГБ"}, {"at": "2026-11-19T11:04:20+00:00", "node": "pilot", "title": "Пилот Telegram", "from": "fail", "to": "ok", "text": "задача выполняется"}]};
+const MWORD = {ok:"Работает", warn:"Замечание", fail:"Сбой", unknown:"Неизвестно", none:"Не проверяется"};
+const MGLYPH = {ok:"M7 12.5l3.2 3.2L17 9", warn:"M12 6.5v7M12 17v.2", fail:"M8 8l8 8M16 8l-8 8", unknown:"M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8M12 17v.2", none:"M8 12h8"};
+const mtone = s => s === "unknown" ? "warn" : s;
+const micon = (s, z=18) => `<svg class="ic" data-s="${mtone(s)}" width="${z}" height="${z}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="${MGLYPH[s]||MGLYPH.none}"/></svg>`;
+const mnum = v => v.toFixed(1).replace(".", ",");
+const mclock = iso => new Date(iso).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Moscow"});
+const mdur = sec => { const m=Math.floor(sec/60); if(m<60) return m+" мин"; const h=Math.floor(m/60); return h<48?`${h} ч ${m%60} мин`:`${Math.floor(h/24)} дн ${h%24} ч`; };
+const mcut = (s,n) => s.length>n ? s.slice(0,n-1).trimEnd()+"…" : s;
+const MONINFO = {aisrv:"linux",lx_gateway:"linux",lx_queue:"linux",lx_connector:"linux",owner_analyst:"analyst",owner_tunnel:"tunnel",crm_snap:"herzencrm",engnode:"sandbox",app_gpt:"codex",app_claude:"claude",tg:"ana-tg",gpt:"codex",pilot:"tgloop",inbox:"inbox",owner:"queue",gateway:"oc-gw",agent_ana:"oc-ana",agent_eng:"sandbox",vm:"vm",disk:"vm",mem:"vm",vpn:"access",remote:"access",owner_cycle:"cycle",otel:"otel",browser:"browser",janitor:"janitor"};
+function mpath(pts,r=10){ let d=`M${pts[0][0]},${pts[0][1]}`;
+  for(let i=1;i<pts.length-1;i++){ const [px,py]=pts[i-1],[x,y]=pts[i],[nx,ny]=pts[i+1];
+    const a=Math.min(r,Math.hypot(x-px,y-py)/2), b=Math.min(r,Math.hypot(nx-x,ny-y)/2);
+    d+=` L${x-Math.sign(x-px)*a},${y-Math.sign(y-py)*a} Q${x},${y} ${x+Math.sign(nx-x)*b},${y+Math.sign(ny-y)*b}`; }
+  const l=pts[pts.length-1]; return d+` L${l[0]},${l[1]}`; }
+function renderMonitor(){
+  const st = Object.fromEntries(MON.nodes.map(n=>[n.id,n]));
+  const bad = MON.nodes.filter(n=>n.status==="fail"), soft = MON.nodes.filter(n=>n.status==="warn"||n.status==="unknown");
+  const o = MON.overall;
+  document.getElementById("mhero").dataset.s = o;
+  const hi = document.getElementById("mheroIcon"); hi.dataset.s = o; hi.innerHTML = `<circle cx="12" cy="12" r="11"/><path d="${MGLYPH[o]}"/>`;
+  document.getElementById("mstamp").textContent = "Снимок пульта · " + mclock(MON.generated_at) + " МСК";
+  document.getElementById("mverdict").textContent = o==="ok" ? "Всё работает" : o==="fail" ? `Не работает: ${bad.length}` : `Есть замечания: ${soft.length}`;
+  document.getElementById("msub").textContent = bad.length ? bad.map(n=>n.title).join(", ") : soft.length ? soft.map(n=>`${n.title} — ${n.summary}`).join(", ") : "Все проверяемые модули отвечают.";
+  const m = MON.metrics, checked = MON.nodes.filter(n=>n.status!=="none").length;
+  document.getElementById("mup").textContent = m.uptime_seconds!=null ? mdur(m.uptime_seconds) : "—";
+  document.getElementById("mboot").textContent = m.boot ? "Загрузка " + mclock(m.boot) : "";
+  document.getElementById("mshare").textContent = `${MON.counts.ok} из ${checked}`;
+  document.getElementById("mcounts").innerHTML = ["ok","warn","fail"].map(k=>`<span>${micon(k,14)} ${MWORD[k]}: ${k==="warn"?MON.counts.warn+MON.counts.unknown:MON.counts[k]}</span>`).join("");
+  const meter=(id,used,total,s)=>{const e=document.getElementById(id); e.dataset.s=mtone(s||"ok"); e.firstElementChild.style.width=Math.max(2,Math.min(100,used/total*100))+"%";};
+  if(m.disk){document.getElementById("mdiskv").textContent=`${mnum(m.disk.free_gb)} ГБ свободно`; document.getElementById("mdisks").textContent=`из ${mnum(m.disk.total_gb)} ГБ; замечание при меньше 8 ГБ`; meter("mdiskm",m.disk.total_gb-m.disk.free_gb,m.disk.total_gb,st.disk?.status);}
+  if(m.memory){document.getElementById("mmemv").textContent=`${mnum(m.memory.free_gb)} ГБ свободно`; document.getElementById("mmems").textContent=`из ${mnum(m.memory.total_gb)} ГБ`; meter("mmemm",m.memory.total_gb-m.memory.free_gb,m.memory.total_gb,st.mem?.status);}
+  const svg = document.getElementById("mmap"), W=MON_MAP.canvas.w, H=MON_MAP.canvas.h;
+  svg.setAttribute("width",W); svg.setAttribute("height",H);
+  PMap.render(svg, MON_MAP, MON);  // тот же код, что в пульте: блок PULT-MAP:JS
+  const row = n => `<div class="mrow">${micon(n.status,20)}<div style="min-width:0"><b>${escI(n.title)}</b> · ${MWORD[n.status]}<div class="m">${escI(n.summary)}</div></div></div>`;
+  const issues=[...bad,...soft];
+  document.getElementById("missues").innerHTML = issues.length ? issues.map(row).join("") : `<p class="count">Замечаний нет.</p>`;
+  document.getElementById("mevents").innerHTML = MON.events.length ? MON.events.slice(0,10).map(e=>`<div class="mrow"><span class="time">${mclock(e.at)}</span><div style="min-width:0"><b>${escI(e.title)}</b> <span class="m">${MWORD[e.to]?"→ "+MWORD[e.to]+" · ":""}${escI(e.text)}</span></div></div>`).join("") : `<p class="count">Изменений не было.</p>`;
+}
+function openMonNode(id){
+  const n = MON_MAP.nodes.find(x=>x.id===id), s = MON.nodes.find(x=>x.id===id) || {status:"none",checks:[],summary:n.subtitle||""};
+  const base = INFO[MONINFO[id]];
+  const d = Object.assign({}, base || {t:n.title, k:"Модуль сервера", sys:"env", what:n.note||""}, {t:n.title, st:{ok:"ok",warn:"part",fail:"pause",unknown:"part"}[s.status]||"plan"});
+  if (base && n.note) d.what = n.note + " " + (base.what||"");
+  d.live = s.checks.length ? s.checks : [{title:"Статус", status:s.status, text:s.summary}];
+  openInfo(d);
+}
+
+renderMonitor();
+const mm=document.getElementById("mmap");
+mm.addEventListener("click",e=>{const g=e.target.closest(".node"); if(g) openMonNode(g.dataset.id);});
+mm.addEventListener("keydown",e=>{const g=e.target.closest(".node"); if(g&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openMonNode(g.dataset.id);}});
+fit(document.getElementById("dg-mon"));
+
+/* ---------- module catalog ---------- */
+const SYS = {ana:"Анастасия", sob:"Сигналы от СОБов", oc:"Среда агентов", env:"Общая среда"};
+const ST = {ok:"Работает", part:"Частично", plan:"Запланировано", pause:"На паузе", demo:"Демо / эксперимент"};
+const C = [
+ ["ana","Навык","Переписка в Telegram","Автоответы в личках от профиля Анастасии, подключение новых личек по согласию.","part","workflows/messenger-inbox/telegram_loop.py",0],
+ ["ana","Навык","Поручения в HerzenCRM","Создавать задачи по объекту или клиенту в HerzenCRM (herzencrm.pro).","plan","",0],
+ ["ana","Навык","Задачи в WEEEK","Реестр дел: шесть действий с задачами в WEEEK, только для проверенных людей. Установлен в шлюз 16.11.","part","agents/plugins/weeek-tasks/",1],
+ ["ana","Навык","Отправка писем","Письма от имени помощника. Сейчас почта только читается.","plan","",0],
+ ["ana","Навык","Заявки","Оформление заявок по шаблону.","plan","",0],
+ ["ana","Агент","Анастасия в OpenClaw","Правила, характер и память в рабочей папке. Без командной строки, цены и сроки — на согласование.","ok","agents/anastasia/",0],
+ ["ana","Правила","Инструкции Анастасии","Характер, правила и сценарии ответов. Утверждены владельцем, лежат на сервере, тон проверен.","ok","agents/anastasia/PLAYBOOK.md",0],
+ ["ana","Мост","Мост личка → OpenClaw","Пилот принимает сообщение в личке, агент Анастасии в шлюзе решает и пишет ответ. Запасной путь — прежний Codex.","ok","workflows/messenger-inbox/telegram_models.py",1],
+ ["ana","Правила","Правила и GPT-персона","Полномочия, формат поручения, когда отвечать самой, когда спросить владельца.","ok","workflows/messenger-inbox/RULES.md",0],
+ ["ana","Сборщик","Сборщик входящих","Читает Telegram Business и почту (только чтение), нормализует, хранит позиции чтения.","ok","workflows/messenger-inbox/collect.py",1],
+ ["ana","Очередь","Очередь и панель","Карточки, статусы и журнал SQLite, локальная панель и CLI.","ok","workflows/messenger-inbox/inbox.py",1],
+ ["ana","Скилл","/messengers","Разбор карточки в Claude: задача для GPT или один вопрос владельцу.","ok","workflows/messenger-inbox/.claude/skills/messengers/SKILL.md",1],
+ ["ana","Инструмент","«Копирайтер Анастасии»","Проект ChatGPT для черновиков в голосе Анастасии.","ok","workflows/messenger-inbox/editor/",0],
+ ["ana","Бот","Бот владельца","Поручения и решения; вопросы и один повтор через 30 минут только владельцу.","ok","workflows/messenger-inbox/owner_bot.py",1],
+ ["ana","Адаптер","Адаптер моделей","Маршрут выбирает агент Анастасии в OpenClaw через мост; если шлюз не ответил — Codex CLI пилота.","ok","workflows/messenger-inbox/telegram_models.py",1],
+ ["ana","Очередь","Очередь исходящих","Анастасия пишет первой по поручению или от процесса: в окне суток через бота, вне окна — от своего аккаунта.","ok","workflows/messenger-inbox/outbox.py",1],
+ ["ana","Режим","Служебная личка","Ответы-коды уходят процессу, на остальное Анастасия отвечает сама. Так работает разбор сигналов аналитиком.","ok","workflows/messenger-inbox/outbox.py",1],
+ ["ana","Отчёт","Сводка и таблица ошибок","Каждый день в 20:00 сводка Ярославу, по понедельникам таблица ошибок, команда /error.","ok","workflows/messenger-inbox/reports.py",0],
+ ["ana","Хранилище","Реестр собеседников","Согласие, профили и отдельный контекст каждого диалога.","part","workflows/messenger-inbox/telegram_contacts.py",0],
+ ["ana","Транспорт","Группы Telegram","С 19.11 бот Анастасии пишет в группы и отвечает коллегам на ответы и упоминания.","part","workflows/messenger-inbox/telegram_loop.py",0],
+ ["ana","Пилот","«Дурашка» через окно","Управление окном Telegram раз в 5 минут. Отправка не подтвердилась, приостановлено.","pause","",0],
+ ["ana","Эксперимент","Разбор через Anthropic API","Пробный сценарий подготовки ответа в Claude по API.","demo","workflows/messenger-inbox/triage-claude.py",0],
+ ["sob","Источник","Поиски ЦИАН","Два сохранённых поиска «От собственника», частота «Мгновенно».","ok","",0],
+ ["sob","Источник","Поиски Авито","Поиски сохранены, разбор подборок готов с 19.11. Живые письма ещё не подтверждены.","part","",0],
+ ["sob","Источник","M2DATA","Исключён из текущего этапа.","pause","",0],
+ ["sob","Адаптер","IMAP-адаптер сигналов","Читает уведомления по IMAP/TLS, ведёт курсор, повторяет пакет при сбое.","part","workflows/cian-owner-service/intake/imap_collect.py",1],
+ ["sob","Импорт","Импорт и пороги","Убирает повторы, проверяет пороги, неоднозначное отправляет на проверку.","ok","workflows/cian-owner-service/intake/intake.py",0],
+ ["sob","Сверка","Подбор кандидатов CRM","Адрес и соседние здания, затем 1 км и 5 км. Объект → корпус → блок.","ok","workflows/cian-owner-service/crm/enrich.py",1],
+ ["sob","Рынок","Активные объявления","Срез рынка без пересечений с «Сигналами». 43 карточки ЦИАН.","part","workflows/cian-owner-service/intake/market_snapshot.py",0],
+ ["sob","Реестр","Реестр площадок","Одна запись на доску: код, разбор ссылки, служебные ссылки, домены фото. ДомКлик — ждём первое письмо, Яндекс скрыт.","ok","workflows/cian-owner-service/intake/sources.py",1],
+ ["sob","Сверка","Пересверка rematch","Заново сверяет открытые карточки по свежему снимку CRM, сохраняет ручные решения.","ok","workflows/cian-owner-service/service.py",0],
+ ["sob","Сервис","Веб-очередь сигналов","Python и SQLite без внешних зависимостей. Вход, фильтры, журнал связей.","ok","workflows/cian-owner-service/service.py",0],
+ ["sob","Цикл","Цикл сигналов","Каждые 10 минут: почта bot@ → карточка → сообщение через Анастасию. С 18.11 на сервере, на пульте под присмотром.","part","workflows/cian-owner-service/owner_cycle.py",1],
+ ["sob","Доставка","Разовая доставка в Telegram","Проверяет бота и получателя, пишет квитанцию от дублей.","part","workflows/cian-owner-service/telegram_once.py",1],
+ ["sob","Цикл","Разбор аналитиком","Раз в 2 минуты Анастасия присылает Светлане одну карточку, ответ цифрой записывается решением в очередь.","ok","workflows/cian-owner-service/analyst_loop.py",0],
+ ["sob","Доступ","Туннель очереди","Публичная ссылка на очередь через cloudflared, без входа. Адрес меняется при перезапуске.","part","workflows/cian-owner-service/deploy/tunnel/",0],
+ ["sob","Демо","Предпросмотр очереди","Сценарии на тестовых карточках без CRM, почты и Telegram.","demo","workflows/cian-owner-preview/",0],
+ ["oc","Шлюз","OpenClaw Gateway","Версия 2026.11.3, только локальные подключения, автообновление выключено. С 12.11 под отдельной учёткой без прав администратора.","ok","agents/openclaw.fragment.json5",0],
+ ["oc","Рантайм","@openclaw/codex","Модели по подписке ChatGPT через Codex.","ok","",0],
+ ["oc","Агент","Инженер песочницы","Ведёт проект и очередь задач. Команды выполняет сам на узле инженера; при нарушении границы сторож возвращает согласование.","ok","agents/sandbox/",0],
+ ["oc","Узел","Узел инженера","Здесь выполняются команды инженера песочницы: отдельная учётка Windows без прав администратора. Работает с 16.11, на пульте с 17.11, перезапуск шлюза его не трогает. Пульт читает отчёт сторожа инженера: граница прав цела, режим не понижен, узел на связи.","ok","",0],
+ ["oc","Вход","Сторож входа","Внутри задачи шлюза: вход агентов в ChatGPT, пробный вопрос, проверка границы инженера. На нём держится повторный вход.","ok","agents/agents-account/login-watcher.mjs",0],
+ ["oc","Канал","Telegram-боты агентов","Боты Анастасии и инженера на связи, владелец одобрен. Токены нужно перевыпустить.","ok","",0],
+ ["oc","Задачи","Стек задач агентов","Что делаем по агентам первым и что считается готовым.","ok","agents/TASKS.md",0],
+ ["oc","Эксплуатация","Резервная копия","Настройки и папки агентов; база состояния не вошла.","part","",0],
+ ["env","Среда","Виртуальная машина Windows","Windows 11 Pro, 8 vCPU, 16 ГБ, диск 63 ГБ. Мониторинг Zabbix.","ok","",0],
+ ["env","Запуск","Планировщик Windows","Модули стартуют при загрузке без входа пользователя; пилот — с 19.11. Приложения рабочего стола — после входа.","part","",0],
+ ["env","Данные","Снимок HerzenCRM","С 19.11 каждую ночь в 05:10 и по новому сигналу, если снимку больше часа: объекты и блоки двумя выгрузками HerzenStats, затем пересверка очереди. CRM не перебираем, запись в CRM не ведётся.","ok","workflows/cian-owner-service/crm_snapshot.mjs",0],
+ ["env","Установка","Release.ps1","Установка релиза на Windows с проверкой контрольной суммы.","ok","workflows/cian-owner-service/deploy/Release.ps1",1],
+ ["env","Наблюдение","Монитор Playground","Пульт: сверху четыре полосы с вердиктом для руководителя, ниже схема модулей со статусами. Проверка раз в минуту, автоподъём, сообщения о сбоях в Telegram, вкладка с дневником инцидентов. Новый модуль — запись в components.json.","ok","monitor/",1],
+ ["env","Эксплуатация","Сторожа VPN","С 19.11 зависший VPN переподключается сам. Основной сторож — Глеба: проверяет шлюз VPN раз в 30 секунд, после трёх неответов переподключает. Запасной — сторож пульта: вмешивается, только если сторож Глеба упал, а трафика нет дольше 30 секунд. Остальную сеть оба не трогают.","ok","",0],
+ ["env","Наблюдение","Сигнал жизни","Пульт раз в минуту шлёт пинг внешнему сторожу Cronping (меняется одной строкой в heartbeat.json). Пинги пропали — тревога Ярославу в Telegram, даже если сервер или VPN лежат. Работает с 17.11.","part","monitor/monitor.py",0],
+ ["env","Вход","Повторный вход в ChatGPT","Пульт сам открывает вход OpenAI в Chrome сервера, владелец нажимает «Продолжить». Пароли не вводятся.","part","monitor/relogin.py",1],
+ ["env","Агент","Браузерный агент","С 19.11 разовые поручения в браузере сервера: Claude Code управляет отдельным Chrome со своим профилем через Playwright MCP. Chrome стартует при входе admin в Windows, на пульте — блок «Chrome агента». Пароли и коды вводит человек.","part","agents/browser-agent/",0],
+ ["env","Наблюдение","Экспорт OTel","С 19.11 раз в минуту отправляет метрики, журналы и трассировки Playground в коллектор OpenTelemetry Глеба (APM Zabbix). Коллектор доступен только через VPN; без него данные копятся и уходят потом. На пульте — блок рядом с Zabbix, сбой только замечание.","ok","workflows/otel/",0],
+ ["env","Эксплуатация","Уборщик","С 19.11 раз в 2 часа закрывает забытые окна, консоли и вкладки Chrome агента на сервере; основной Chrome бережёт расширение Tab Wrangler. На пульте отдельным блоком.","ok","workflows/server-janitor/",1],
+ ["env","Эксплуатация","Дневник инцидентов","Сбои, их причины и десять правил. Правило №1: сеть и VPN меняет только администратор. Открыт на пульте вкладкой «Инциденты».","ok","docs/incidents.md",1],
+ ["env","Машина","Linux-машина ai-srv","Репетиционный шлюз с 19.11: оба агента отвечают, бот инженера и WEEEK работают отсюда. Автозапуска пока нет; Анастасия переедет следующей.","part","docs/modules.md",0],
+ ["env","Шаблон","Карточка процесса","Владелец, входы и выходы, права, запуск и приёмка.","ok","workflows/template.md",1],
+ ["env","Утилита","Проверка сети","HTTPS и IMAP/TLS без авторизации.","ok","workflows/messenger-inbox/probe-network.py",1]
+];
+const fs = {sys:"all", st:"all", q:""};
+function chips(el, map, key){
+  const all = Object.assign({all:"Все"}, map);
+  if (key==="sys") all.reuse = "Можно переиспользовать";
+  el.innerHTML = Object.entries(all).map(([k,v])=>`<button class="chip" type="button" id="f-${key}-${k}" data-k="${k}" aria-pressed="${fs[key]===k}">${v}</button>`).join("");
+  el.addEventListener("click",e=>{const b=e.target.closest(".chip"); if(!b) return; fs[key]=b.dataset.k; el.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b)); render();});
+}
+const esc = s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function render(){
+  const q = fs.q.trim().toLowerCase();
+  const list = C.filter(([s,k,n,d,st,p,r])=>(fs.sys==="all"||(fs.sys==="reuse"?r:s===fs.sys))&&(fs.st==="all"||st===fs.st)&&(!q||(k+" "+n+" "+d+" "+p).toLowerCase().includes(q)));
+  document.getElementById("count").textContent = `Показано ${list.length} из ${C.length}`;
+  document.getElementById("cards").innerHTML = list.map(([s,k,n,d,st,p,r])=>`
+    <article class="card" tabindex="0" role="button" data-name="${esc(n)}">
+      <div class="row"><span class="kind">${esc(k)}</span><span class="st ${st}">${ST[st]}</span></div>
+      <h4>${esc(n)}</h4><span class="sysbadge">${SYS[s]}</span><p>${esc(d)}</p>
+      ${p?`<span class="path">${esc(p)}</span>`:""}${r?`<span class="reuse">Можно переиспользовать</span>`:""}
+    </article>`).join("") || `<p class="count">Ничего не нашлось. Сбросьте фильтры или измените запрос.</p>`;
+}
+chips(document.getElementById("f-sys"), SYS, "sys");
+chips(document.getElementById("f-st"), ST, "st");
+document.getElementById("q").addEventListener("input",e=>{fs.q=e.target.value; render();});
+function openCard(card){
+  const e = C.find(x=>x[2]===card.dataset.name); if(!e) return;
+  const [sys,k,n,d,st,p] = e, base = INFO[CATINFO[n]];
+  openInfo(base ? Object.assign({}, base, {t:n, k, st, sys, path: p || base.path}) : {t:n, k, st, sys, what:d, path:p});
+}
+const cardsEl = document.getElementById("cards");
+cardsEl.addEventListener("click", e=>{const c=e.target.closest(".card"); if(c) openCard(c);});
+cardsEl.addEventListener("keydown", e=>{const c=e.target.closest(".card"); if(c && (e.key==="Enter"||e.key===" ")){e.preventDefault(); openCard(c);}});
+render();
+</script>
